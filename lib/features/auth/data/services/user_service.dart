@@ -48,21 +48,46 @@ class UserService {
   }
 
   Future<void> createInitialUserData(User user, String name) async {
-    // Create profile
-    await _client.from('profiles').insert({
-      'id': user.id,
-      'name': name,
-      'created_at': DateTime.now().toIso8601String(),
-      'updated_at': DateTime.now().toIso8601String(),
-    });
+    // First, check if the tables exist
+    try {
+      print('Checking if tables exist...');
+      await _client.from('profiles').select('id').limit(1);
+      await _client.from('user_settings').select('user_id').limit(1);
+      print('Tables exist, proceeding with data creation');
+    } catch (e) {
+      print('Error checking tables: $e');
+      throw Exception('Database tables may not exist: $e');
+    }
 
-    // Create user settings with default values
-    await _client.from('user_settings').insert({
-      'user_id': user.id,
-      'daily_goal': 1800, // 30 minutes in seconds
-      'streak': 0,
-      'last_streak_check': DateTime.now().toIso8601String(),
-      'updated_at': DateTime.now().toIso8601String(),
-    });
+    // Create or update profile
+    try {
+      print('Creating/updating profile for user: ${user.id}');
+      await _client.from('profiles').upsert({
+        'id': user.id,
+        'name': name,
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+      print('Profile created/updated successfully');
+    } catch (e) {
+      print('Error creating/updating profile: $e');
+      // Continue to try creating settings even if profile fails
+    }
+
+    // Create or update settings
+    try {
+      print('Creating/updating settings for user: ${user.id}');
+      await _client.from('user_settings').upsert({
+        'user_id': user.id,
+        'daily_goal': 1800, // 30 minutes in seconds
+        'streak': 0,
+        'last_streak_check': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+      print('Settings created/updated successfully');
+    } catch (e) {
+      print('Error creating/updating settings: $e');
+      throw Exception('Failed to create/update user settings: $e');
+    }
   }
 } 

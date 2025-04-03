@@ -6,16 +6,22 @@ class SupabaseConfig {
   static String get supabaseAnonKey => dotenv.env['SUPABASE_ANON_KEY'] ?? '';
 
   static Future<void> initialize() async {
+    print('Loading environment variables...');
     await dotenv.load(fileName: ".env");
     
-    if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
-      throw Exception('Supabase configuration is missing. Please check your .env file.');
-    }
-
+    // Use hardcoded values temporarily for debugging
+    final url = "https://jqwzgfhcevsambdibuqo.supabase.co";
+    final anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impxd3pnZmhjZXZzYW1iZGlidXFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2NDc3NTIsImV4cCI6MjA1OTIyMzc1Mn0.Gi_65LAmCbl_wT8nrXVlIppiBTAg4gRUDRPq4Du678k";
+    
+    print('Using hardcoded Supabase URL: $url');
+    print('Using hardcoded Supabase Anon Key: ${anonKey.substring(0, 10)}...');
+    
+    print('Initializing Supabase with URL: $url');
     await Supabase.initialize(
-      url: supabaseUrl,
-      anonKey: supabaseAnonKey,
+      url: url,
+      anonKey: anonKey,
     );
+    print('Supabase initialized successfully');
   }
 
   static SupabaseClient get client => Supabase.instance.client;
