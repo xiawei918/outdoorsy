@@ -2,6 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../features/history/domain/models/time_entry.dart';
 
+final mockDataProvider = StateNotifierProvider<MockDataNotifier, MockData>((ref) {
+  return MockDataNotifier();
+});
+
 class MockData {
   final List<TimeEntry> timeEntries;
   final int currentStreak;
@@ -55,65 +59,75 @@ class MockDataNotifier extends StateNotifier<MockData> {
     final fiveDaysAgo = today.subtract(const Duration(days: 5));
 
     // Create time entries with varying durations
-    final timeEntries = [
+    final List<TimeEntry> timeEntries = [
       // Today's entries - meets goal
       TimeEntry(
         id: const Uuid().v4(),
+        userId: 'mock-user',
         startTime: today,
         endTime: today,
         duration: 45 * 60, // 45 minutes
         date: today,
         isManual: false,
+        createdAt: now,
       ),
       TimeEntry(
         id: const Uuid().v4(),
+        userId: 'mock-user',
         startTime: today,
         endTime: today,
         duration: 30 * 60, // 30 minutes
         date: today,
         isManual: true,
+        createdAt: now,
       ),
 
       // Yesterday's entries - meets goal
       TimeEntry(
         id: const Uuid().v4(),
+        userId: 'mock-user',
         startTime: yesterday,
         endTime: yesterday,
         duration: 60 * 60, // 60 minutes
         date: yesterday,
         isManual: false,
+        createdAt: now,
       ),
-
-      // Two days ago - no activity (skipped)
 
       // Three days ago - below goal
       TimeEntry(
         id: const Uuid().v4(),
+        userId: 'mock-user',
         startTime: threeDaysAgo,
         endTime: threeDaysAgo,
         duration: 15 * 60, // 15 minutes (below 30 min goal)
         date: threeDaysAgo,
         isManual: true,
+        createdAt: now,
       ),
 
       // Four days ago - meets goal
       TimeEntry(
         id: const Uuid().v4(),
+        userId: 'mock-user',
         startTime: fourDaysAgo,
         endTime: fourDaysAgo,
         duration: 45 * 60, // 45 minutes
         date: fourDaysAgo,
         isManual: false,
+        createdAt: now,
       ),
 
       // Five days ago - meets goal
       TimeEntry(
         id: const Uuid().v4(),
+        userId: 'mock-user',
         startTime: fiveDaysAgo,
         endTime: fiveDaysAgo,
         duration: 60 * 60, // 60 minutes
         date: fiveDaysAgo,
         isManual: false,
+        createdAt: now,
       ),
     ];
 
@@ -170,7 +184,7 @@ class MockDataNotifier extends StateNotifier<MockData> {
     daysMetGoal = dateMap.values.where((seconds) => seconds >= dailyGoal).length;
 
     return MockData(
-      timeEntries: timeEntries,
+      timeEntries: List<TimeEntry>.from(timeEntries),
       currentStreak: currentStreak,
       longestStreak: longestStreak,
       dailyGoal: dailyGoal,
@@ -181,13 +195,12 @@ class MockDataNotifier extends StateNotifier<MockData> {
   }
 
   void updateTimeEntries(List<TimeEntry> entries) {
-    state = state.copyWith(timeEntries: entries);
+    state = state.copyWith(timeEntries: List<TimeEntry>.from(entries));
     _calculateStats();
   }
 
-  void updateDailyGoal(int seconds) {
-    state = state.copyWith(dailyGoal: seconds);
-    _calculateStats();
+  void updateDailyGoal(int newGoal) {
+    state = state.copyWith(dailyGoal: newGoal);
   }
 
   void _calculateStats() {
@@ -203,38 +216,37 @@ class MockDataNotifier extends StateNotifier<MockData> {
       return;
     }
 
-    // Sort entries by date in descending order
-    entries.sort((a, b) => b.date.compareTo(a.date));
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
 
-    // Calculate total outdoor time and active days
-    final totalSeconds = entries.fold(0, (sum, entry) => sum + entry.duration);
-    final activeDays = entries.map((e) => e.date).toSet().length;
+    final uniqueDates = <DateTime>{};
+    var totalOutdoorTime = 0;
+    var daysMetGoal = 0;
+    var currentStreak = 0;
+    var longestStreak = 0;
+    var tempStreak = 0;
 
-    // Calculate streaks and days met goal
-    int currentStreak = 0;
-    int longestStreak = 0;
-    int daysMetGoal = 0;
-    int tempStreak = 0;
+    // Process entries in chronological order
+    final sortedEntries = List<TimeEntry>.from(entries)
+      ..sort((a, b) => a.date.compareTo(b.date));
 
-    // Group entries by date
-    final entriesByDate = <DateTime, int>{};
-    for (final entry in entries) {
-      entriesByDate[entry.date] = (entriesByDate[entry.date] ?? 0) + entry.duration;
-    }
+    for (final entry in sortedEntries) {
+      final entryDate = DateTime(
+        entry.date.year,
+        entry.date.month,
+        entry.date.day,
+      );
+      uniqueDates.add(entryDate);
+      totalOutdoorTime += entry.duration;
 
-    // Sort dates in descending order
-    final sortedDates = entriesByDate.keys.toList()..sort((a, b) => b.compareTo(a));
-
-    // Calculate streaks
-    for (final date in sortedDates) {
-      final totalDuration = entriesByDate[date]!;
-      if (totalDuration >= state.dailyGoal) {
-        daysMetGoal++;
+      if (entry.duration >= state.dailyGoal) {
         tempStreak++;
         if (tempStreak > longestStreak) {
           longestStreak = tempStreak;
         }
-        if (currentStreak == 0) {
+        if (entryDate.isAtSameMomentAs(today) || 
+            entryDate.isAtSameMomentAs(yesterday)) {
           currentStreak = tempStreak;
         }
       } else {
@@ -242,16 +254,24 @@ class MockDataNotifier extends StateNotifier<MockData> {
       }
     }
 
+    // Calculate days that met the goal
+    final dateMap = <DateTime, int>{};
+    for (final entry in entries) {
+      final date = DateTime(
+        entry.date.year,
+        entry.date.month,
+        entry.date.day,
+      );
+      dateMap[date] = (dateMap[date] ?? 0) + entry.duration;
+    }
+    daysMetGoal = dateMap.values.where((seconds) => seconds >= state.dailyGoal).length;
+
     state = state.copyWith(
       currentStreak: currentStreak,
       longestStreak: longestStreak,
       daysMetGoal: daysMetGoal,
-      totalOutdoorTime: totalSeconds,
-      activeDays: activeDays,
+      totalOutdoorTime: totalOutdoorTime,
+      activeDays: uniqueDates.length,
     );
   }
-}
-
-final mockDataProvider = StateNotifierProvider<MockDataNotifier, MockData>((ref) {
-  return MockDataNotifier();
-}); 
+} 

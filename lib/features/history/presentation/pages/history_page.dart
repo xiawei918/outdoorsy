@@ -42,35 +42,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final entries = ref.watch(historyProvider);
-    final groupedEntries = <String, List<TimeEntry>>{};
-
-    // Sort entries by date (newest first)
-    final sortedEntries = List<TimeEntry>.from(entries)
-      ..sort((a, b) => b.date.compareTo(a.date));
-
-    // Group entries by date
-    for (final entry in sortedEntries) {
-      final date = entry.date;
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final yesterday = today.subtract(const Duration(days: 1));
-      final entryDate = DateTime(date.year, date.month, date.day);
-
-      String dateKey;
-      if (entryDate.isAtSameMomentAs(today)) {
-        dateKey = 'Today';
-      } else if (entryDate.isAtSameMomentAs(yesterday)) {
-        dateKey = 'Yesterday';
-      } else {
-        dateKey = DateFormat('EEEE, MMMM d, yyyy').format(date);
-      }
-
-      if (!groupedEntries.containsKey(dateKey)) {
-        groupedEntries[dateKey] = [];
-      }
-      groupedEntries[dateKey]!.add(entry);
-    }
+    final entriesState = ref.watch(historyProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -99,69 +71,133 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                 ],
               ),
               const SizedBox(height: 24),
-              if (groupedEntries.isEmpty)
-                Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'No outdoor time entries yet',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Start tracking your time outside or add time manually',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: groupedEntries.length,
-                    itemBuilder: (context, index) {
-                      final dateKey = groupedEntries.keys.elementAt(index);
-                      final dateEntries = groupedEntries[dateKey]!;
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.calendar_today, size: 16),
-                              const SizedBox(width: 8),
-                              Text(
-                                dateKey,
-                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
+              Expanded(
+                child: entriesState.when(
+                  data: (entries) {
+                    if (entries.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'No outdoor time entries yet',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: Colors.grey[600],
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          ...dateEntries.map((entry) => TimeEntryCard(
-                            entry: entry,
-                            onDelete: () {
-                              ref.read(historyProvider.notifier).deleteEntry(entry.id);
-                            },
-                            onEdit: (newDuration) {
-                              ref.read(historyProvider.notifier).editEntry(
-                                entry.id,
-                                newDuration,
-                              );
-                            },
-                          )),
-                          const SizedBox(height: 24),
-                        ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Start tracking your time outside or add time manually',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
                       );
-                    },
+                    }
+
+                    final groupedEntries = <String, List<TimeEntry>>{};
+
+                    // Sort entries by date (newest first)
+                    final sortedEntries = List<TimeEntry>.from(entries)
+                      ..sort((a, b) => b.date.compareTo(a.date));
+
+                    // Group entries by date
+                    for (final entry in sortedEntries) {
+                      final date = entry.date;
+                      final now = DateTime.now();
+                      final today = DateTime(now.year, now.month, now.day);
+                      final yesterday = today.subtract(const Duration(days: 1));
+                      final entryDate = DateTime(date.year, date.month, date.day);
+
+                      String dateKey;
+                      if (entryDate.isAtSameMomentAs(today)) {
+                        dateKey = 'Today';
+                      } else if (entryDate.isAtSameMomentAs(yesterday)) {
+                        dateKey = 'Yesterday';
+                      } else {
+                        dateKey = DateFormat('EEEE, MMMM d, yyyy').format(date);
+                      }
+
+                      if (!groupedEntries.containsKey(dateKey)) {
+                        groupedEntries[dateKey] = [];
+                      }
+                      groupedEntries[dateKey]!.add(entry);
+                    }
+
+                    return ListView.builder(
+                      itemCount: groupedEntries.length,
+                      itemBuilder: (context, index) {
+                        final dateKey = groupedEntries.keys.elementAt(index);
+                        final dateEntries = groupedEntries[dateKey]!;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today, size: 16),
+                                const SizedBox(width: 8),
+                                Text(
+                                  dateKey,
+                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            ...dateEntries.map((entry) => TimeEntryCard(
+                              entry: entry,
+                              onDelete: () {
+                                ref.read(historyProvider.notifier).deleteEntry(entry.id);
+                              },
+                              onEdit: (newDuration) {
+                                ref.read(historyProvider.notifier).editEntry(
+                                  entry.id,
+                                  newDuration,
+                                );
+                              },
+                            )),
+                            const SizedBox(height: 24),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                  error: (error, stackTrace) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 48,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error loading entries',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Colors.red,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          error.toString(),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey[600],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+              ),
             ],
           ),
         ),

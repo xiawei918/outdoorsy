@@ -9,7 +9,7 @@ class StatsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(statsProvider);
-
+    
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -39,45 +39,66 @@ class StatsPage extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
 
-              // Stats cards
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.5,
-                children: [
-                  _buildStatCard(
-                    context,
-                    icon: Icons.access_time,
-                    title: 'Total Time',
-                    value: _formatDuration(stats.totalSeconds),
+              if (stats.isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
                   ),
-                  _buildStatCard(
-                    context,
-                    icon: Icons.calendar_today,
-                    title: 'Active Days',
-                    value: stats.activeDays.toString(),
+                )
+              else if (stats.error != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Error: ${stats.error}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
                   ),
-                  _buildStatCard(
-                    context,
-                    icon: Icons.local_fire_department,
-                    title: 'Current Streak',
-                    value: '${stats.currentStreak} ${stats.currentStreak == 1 ? 'day' : 'days'}',
-                  ),
-                  _buildStatCard(
-                    context,
-                    icon: Icons.check_circle,
-                    title: 'Goals Met',
-                    value: '${stats.daysMetGoal} ${stats.daysMetGoal == 1 ? 'day' : 'days'}',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
+                )
+              else ...[
+                // Stats cards
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.5,
+                  children: [
+                    _buildStatCard(
+                      context,
+                      icon: Icons.access_time,
+                      title: 'Total Time',
+                      value: _formatDuration(stats.totalSeconds),
+                    ),
+                    _buildStatCard(
+                      context,
+                      icon: Icons.calendar_today,
+                      title: 'Active Days',
+                      value: stats.activeDays.toString(),
+                    ),
+                    _buildStatCard(
+                      context,
+                      icon: Icons.local_fire_department,
+                      title: 'Current Streak',
+                      value: '${stats.currentStreak} ${stats.currentStreak == 1 ? 'day' : 'days'}',
+                    ),
+                    _buildStatCard(
+                      context,
+                      icon: Icons.check_circle,
+                      title: 'Goals Met',
+                      value: '${stats.daysMetGoal} ${stats.daysMetGoal == 1 ? 'day' : 'days'}',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
 
-              // Time chart
-              const TimeChart(),
+                // Time chart
+                const TimeChart(),
+              ],
             ],
           ),
         ),

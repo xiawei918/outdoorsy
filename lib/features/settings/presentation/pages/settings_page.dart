@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/providers/mock_data_provider.dart';
+import '../providers/settings_provider.dart';
 import '../../../../core/providers/stats_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -9,6 +11,7 @@ import '../../../../core/widgets/settings_card.dart';
 import '../../../../core/widgets/settings_section.dart';
 import '../../../../core/widgets/settings_toggle.dart';
 import '../../../../core/widgets/settings_dropdown.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -24,11 +27,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    final mockData = ref.read(mockDataProvider);
-    _goalController = TextEditingController(
-      text: (mockData.dailyGoal / 60).round().toString(),
-    );
-    _locationController = TextEditingController(text: 'New York, NY');
+    _goalController = TextEditingController();
+    _locationController = TextEditingController();
   }
 
   @override
@@ -41,7 +41,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   void _handleGoalCommit() {
     final minutes = int.tryParse(_goalController.text);
     if (minutes != null && minutes > 0) {
-      ref.read(mockDataProvider.notifier).updateDailyGoal(minutes * 60);
+      _updateDailyGoal(minutes);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Daily goal updated successfully'),
@@ -59,10 +59,29 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
+  void _updateDailyGoal(int minutes) {
+    ref.read(settingsProvider.notifier).updateDailyGoal(minutes);
+  }
+
+  void _handleLocationUpdate() {
+    final location = _locationController.text.trim();
+    if (location.isNotEmpty) {
+      ref.read(settingsProvider.notifier).updateLocation(location);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Location updated successfully'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final mockData = ref.watch(mockDataProvider);
+    final settings = ref.watch(settingsProvider);
     final stats = ref.watch(statsProvider);
+    final currentUser = ref.watch(currentUserProvider);
+    final authService = ref.watch(authServiceProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -90,7 +109,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'User Name',
+                      currentUser?.userMetadata?['name'] ?? 'Guest User',
                       style: AppTypography.headlineSmall,
                     ),
                     const SizedBox(height: 8),
@@ -155,6 +174,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
+                              hintText: '${(settings.dailyGoal / 60).round()}',
                             ),
                           ),
                         ),
@@ -199,7 +219,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Location',
+                      'Your location',
                       style: AppTypography.bodyMedium.copyWith(
                         color: AppColors.gray700,
                       ),
@@ -218,139 +238,32 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        IconButton(
-                          onPressed: () {
-                            _locationController.clear();
-                          },
-                          icon: const Icon(Icons.cancel),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.info_outline,
-                          size: 16,
-                          color: AppColors.gray500,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Setting your location helps us provide accurate sunset times and local weather information.',
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.gray600,
-                            ),
-                          ),
+                        RoundedButton(
+                          onPressed: _handleLocationUpdate,
+                          text: 'Update',
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-              // Display & Units Settings
-              SettingsSection(
-                title: 'Display & Units',
-                subtitle: 'Customize how information is displayed',
-                icon: Icons.wb_sunny,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SettingsDropdown(
-                      label: 'Temperature Units',
-                      value: 'fahrenheit',
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'fahrenheit',
-                          child: Text('Fahrenheit (°F)'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'celsius',
-                          child: Text('Celsius (°C)'),
-                        ),
-                      ],
-                      onChanged: (value) {},
-                    ),
-                    const SizedBox(height: 16),
-                    SettingsDropdown(
-                      label: 'Language',
-                      value: 'english',
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'english',
-                          child: Text('English'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'spanish',
-                          child: Text('Spanish'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'french',
-                          child: Text('French'),
-                        ),
-                      ],
-                      onChanged: (value) {},
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.info_outline,
-                          size: 16,
-                          color: AppColors.gray500,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Choose your preferred units and language settings.',
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.gray600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+              // Sign In/Out Button
+              SizedBox(
+                width: double.infinity,
+                child: RoundedButton(
+                  onPressed: () {
+                    if (currentUser == null) {
+                      context.push('/auth');
+                    } else {
+                      authService.signOut();
+                    }
+                  },
+                  text: currentUser == null ? 'Sign In' : 'Sign Out',
+                  backgroundColor: currentUser == null ? AppColors.primary : AppColors.error,
+                  textColor: Colors.white,
                 ),
-              ),
-              const SizedBox(height: 16),
-
-              // Notifications Settings
-              SettingsSection(
-                title: 'Notifications',
-                icon: Icons.notifications,
-                child: Column(
-                  children: [
-                    SettingsToggle(
-                      title: 'Push Notifications',
-                      subtitle: 'Receive reminders for outdoor time',
-                      value: true,
-                      onChanged: (value) {},
-                    ),
-                    const SizedBox(height: 16),
-                    SettingsToggle(
-                      title: 'Email Notifications',
-                      subtitle: 'Weekly summary of your outdoor time',
-                      value: true,
-                      onChanged: (value) {},
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Logout Button
-              RoundedButton(
-                onPressed: () {},
-                text: 'Log out',
-                icon: Icons.logout,
-                backgroundColor: Colors.white,
-                textColor: AppColors.gray700,
-                borderColor: AppColors.gray200,
               ),
             ],
           ),

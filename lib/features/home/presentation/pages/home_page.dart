@@ -8,7 +8,9 @@ import '../../../history/presentation/pages/history_page.dart';
 import '../../../history/presentation/providers/history_provider.dart';
 import '../../../stats/presentation/pages/stats_page.dart';
 import '../../../settings/presentation/pages/settings_page.dart';
+import '../../../settings/presentation/providers/settings_provider.dart';
 import '../../../../core/providers/mock_data_provider.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -19,7 +21,6 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   // Mock data for initial development
-  final String userName = 'John';
   final String sunsetTime = '7:30 PM';
   int sessionProgress = 0; // minutes
   bool isRunning = false;
@@ -123,8 +124,9 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildHomeContent() {
-    final mockData = ref.watch(mockDataProvider);
-    final dailyGoal = mockData.dailyGoal;
+    final settings = ref.watch(settingsProvider);
+    final dailyGoal = settings.dailyGoal;
+    final currentUser = ref.watch(currentUserProvider);
     
     // Get total progress from history entries
     final totalProgress = ref.watch(historyProvider.notifier).getTodayProgress() + sessionProgress;
@@ -138,7 +140,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           children: [
             // User greeting
             Text(
-              'Hi $userName',
+              'Hi ${currentUser?.userMetadata?['name'] ?? 'Guest'}',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -198,7 +200,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                             const SizedBox(width: 8),
                             Text(
                               isRunning ? 'Tap to stop' : 'Tap to start',
-                              style: Theme.of(context).textTheme.titleMedium,
+                              style: Theme.of(context).textTheme.titleSmall,
                             ),
                           ],
                         ),
@@ -218,55 +220,69 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildWeeklyActivity() {
-    final mockData = ref.watch(mockDataProvider);
+    final settings = ref.watch(settingsProvider);
+    final history = ref.watch(historyProvider);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     
-    // Create a map of dates to total duration for the last 7 days
-    final dateMap = <DateTime, int>{};
-    for (final entry in mockData.timeEntries) {
-      final date = DateTime(
-        entry.date.year,
-        entry.date.month,
-        entry.date.day,
-      );
-      dateMap[date] = (dateMap[date] ?? 0) + entry.duration;
-    }
-    
-    // Generate activity data for the last 7 days
-    final days = List.generate(7, (index) {
-      final date = today.subtract(Duration(days: 6 - index));
-      final duration = dateMap[date] ?? 0;
-      final isActive = duration >= mockData.dailyGoal;
-      return {
-        'date': date,
-        'hasActivity': isActive,
-      };
-    });
+    return history.when(
+      data: (entries) {
+        // Create a map of dates to total duration for the last 7 days
+        final dateMap = <DateTime, int>{};
+        for (final entry in entries) {
+          final date = DateTime(
+            entry.date.year,
+            entry.date.month,
+            entry.date.day,
+          );
+          dateMap[date] = (dateMap[date] ?? 0) + entry.duration;
+        }
+        
+        // Generate activity data for the last 7 days
+        final days = List.generate(7, (index) {
+          final date = today.subtract(Duration(days: 6 - index));
+          final duration = dateMap[date] ?? 0;
+          final isActive = duration >= settings.dailyGoal;
+          return {
+            'date': date,
+            'hasActivity': isActive,
+          };
+        });
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: days.map((day) {
-        return Column(
-          children: [
-            Text(
-              _getDayName(day['date'] as DateTime),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 4),
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: (day['hasActivity'] as bool)
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.surfaceVariant,
-              ),
-            ),
-          ],
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: days.map((day) {
+            return Column(
+              children: [
+                Text(
+                  _getDayName(day['date'] as DateTime),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: (day['hasActivity'] as bool)
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.surfaceVariant,
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Text(
+          'Error: $error',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.error,
+          ),
+        ),
+      ),
     );
   }
 
