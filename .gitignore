@@ -5,9 +5,11 @@
 *.swp
 .DS_Store
 .atom/
+.build/
 .buildlog/
 .history
 .svn/
+.swiftpm/
 migrate_working_dir/
 
 # IntelliJ related
@@ -32,6 +34,7 @@ migrate_working_dir/
 pubspec.lock
 
 # Android related
+## Gradle files
 **/android/**/gradle-wrapper.jar
 **/android/.gradle
 **/android/captures/
@@ -41,6 +44,43 @@ pubspec.lock
 **/android/**/GeneratedPluginRegistrant.java
 **/android/key.properties
 *.jks
+
+## Android Studio
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+
+## Build files
+**/android/**/build/
+**/android/app/build/
+**/android/.gradle/
+**/android/captures/
+**/android/externalNativeBuild/
+**/android/generated/
+
+## Keystore files
+**/android/app/upload-keystore.jks
+**/android/app/keystore.properties
+**/android/app/debug.keystore
+**/android/app/release.keystore
+
+## Generated files
+**/android/app/src/main/java/io/flutter/plugins/
+**/android/app/src/main/kotlin/
+**/android/app/src/debug/
+**/android/app/src/profile/
+
+## Other Android files
+**/android/.idea/
+**/android/app/.idea/
+**/android/.settings/
+**/android/app/.settings/
+**/android/.project
+**/android/app/.project
+**/android/.classpath
+**/android/app/.classpath
+**/android/app/proguard/
+**/android/app/google-services.json
 
 # iOS/XCode related
 **/ios/**/*.mode1v3
