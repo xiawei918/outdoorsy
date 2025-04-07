@@ -16,6 +16,7 @@ class AddEntryDialog extends StatefulWidget {
 class _AddEntryDialogState extends State<AddEntryDialog> {
   late DateTime _selectedDate;
   final _minutesController = TextEditingController();
+  final _secondsController = TextEditingController();
 
   @override
   void initState() {
@@ -26,6 +27,7 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
   @override
   void dispose() {
     _minutesController.dispose();
+    _secondsController.dispose();
     super.dispose();
   }
 
@@ -50,13 +52,30 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(
-            controller: _minutesController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Duration (minutes)',
-              hintText: 'How many minutes?',
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _minutesController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Minutes',
+                    hintText: '0',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: TextField(
+                  controller: _secondsController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Seconds',
+                    hintText: '0',
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           ListTile(
@@ -76,16 +95,18 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
         ),
         TextButton(
           onPressed: () {
-            final minutes = int.tryParse(_minutesController.text);
-            if (minutes != null && minutes > 0) {
+            final minutes = int.tryParse(_minutesController.text) ?? 0;
+            final seconds = int.tryParse(_secondsController.text) ?? 0;
+            
+            if (minutes > 0 || seconds > 0) {
               Navigator.pop(context, {
                 'date': _selectedDate,
-                'duration': minutes * 60,
+                'duration': minutes * 60 + seconds,
               });
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Please enter a valid time in minutes'),
+                  content: Text('Please enter a valid time'),
                   backgroundColor: Colors.red,
                 ),
               );

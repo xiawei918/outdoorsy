@@ -3,6 +3,7 @@ import '../../../../core/providers/mock_data_provider.dart';
 import '../../domain/models/user_settings.dart';
 import '../../data/services/settings_service.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../providers/location_provider.dart';
 
 final settingsServiceProvider = Provider<SettingsService>((ref) {
   return SettingsService();
@@ -81,6 +82,13 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         // Switch to real data when user signs in
         _isUsingMockData = false;
         _loadUserSettings(next.id);
+      }
+    });
+    
+    // Listen to location changes
+    _ref.listen(locationProvider, (previous, next) {
+      if (next.locationString.isNotEmpty && state.locationName.isEmpty) {
+        updateLocation(next.locationString);
       }
     });
   }

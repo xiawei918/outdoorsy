@@ -18,8 +18,12 @@ class TimeEntryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('MMM d').format(entry.date);
     final formattedTime = DateFormat('h:mm a').format(entry.date);
+    
+    // Format duration to show minutes and seconds
+    final minutes = (entry.duration / 60).floor();
+    final seconds = entry.duration % 60;
     final duration = entry.duration > 0
-        ? '${(entry.duration / 60).floor()} minutes'
+        ? '$minutes:${seconds.toString().padLeft(2, '0')}'
         : '< 1 minute';
 
     return Card(
@@ -65,32 +69,7 @@ class TimeEntryCard extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.edit_outlined, size: 20),
                       onPressed: () {
-                        // TODO: Implement edit dialog
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Edit Time Entry'),
-                            content: TextField(
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Duration (minutes)',
-                              ),
-                              onSubmitted: (value) {
-                                final minutes = int.tryParse(value);
-                                if (minutes != null && minutes > 0) {
-                                  onEdit(minutes * 60);
-                                  Navigator.pop(context);
-                                }
-                              },
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('Cancel'),
-                              ),
-                            ],
-                          ),
-                        );
+                        _showEditDialog(context);
                       },
                     ),
                     IconButton(
@@ -126,6 +105,68 @@ class TimeEntryCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+  
+  void _showEditDialog(BuildContext context) {
+    final minutesController = TextEditingController(
+      text: (entry.duration / 60).floor().toString()
+    );
+    final secondsController = TextEditingController(
+      text: (entry.duration % 60).toString()
+    );
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Time Entry'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: minutesController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Minutes',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextField(
+                    controller: secondsController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Seconds',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final minutes = int.tryParse(minutesController.text) ?? 0;
+              final seconds = int.tryParse(secondsController.text) ?? 0;
+              
+              if (minutes > 0 || seconds > 0) {
+                onEdit(minutes * 60 + seconds);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
       ),
     );
   }
