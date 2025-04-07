@@ -19,12 +19,21 @@ class TimeEntryCard extends StatelessWidget {
     final formattedDate = DateFormat('MMM d').format(entry.date);
     final formattedTime = DateFormat('h:mm a').format(entry.date);
     
-    // Format duration to show minutes and seconds
-    final minutes = (entry.duration / 60).floor();
+    // Format duration to show hours, minutes and seconds
+    final hours = (entry.duration / 3600).floor();
+    final minutes = ((entry.duration % 3600) / 60).floor();
     final seconds = entry.duration % 60;
-    final duration = entry.duration > 0
-        ? '$minutes:${seconds.toString().padLeft(2, '0')}'
-        : '< 1 minute';
+    
+    String duration;
+    if (entry.duration > 0) {
+      if (hours > 0) {
+        duration = '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+      } else {
+        duration = '$minutes:${seconds.toString().padLeft(2, '0')}';
+      }
+    } else {
+      duration = '< 1 minute';
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -110,8 +119,11 @@ class TimeEntryCard extends StatelessWidget {
   }
   
   void _showEditDialog(BuildContext context) {
+    final hoursController = TextEditingController(
+      text: (entry.duration / 3600).floor().toString()
+    );
     final minutesController = TextEditingController(
-      text: (entry.duration / 60).floor().toString()
+      text: ((entry.duration % 3600) / 60).floor().toString()
     );
     final secondsController = TextEditingController(
       text: (entry.duration % 60).toString()
@@ -128,6 +140,16 @@ class TimeEntryCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: TextField(
+                    controller: hoursController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Hours',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
                     controller: minutesController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
@@ -135,7 +157,7 @@ class TimeEntryCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: secondsController,
@@ -156,11 +178,12 @@ class TimeEntryCard extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
+              final hours = int.tryParse(hoursController.text) ?? 0;
               final minutes = int.tryParse(minutesController.text) ?? 0;
               final seconds = int.tryParse(secondsController.text) ?? 0;
               
-              if (minutes > 0 || seconds > 0) {
-                onEdit(minutes * 60 + seconds);
+              if (hours > 0 || minutes > 0 || seconds > 0) {
+                onEdit(hours * 3600 + minutes * 60 + seconds);
                 Navigator.pop(context);
               }
             },
