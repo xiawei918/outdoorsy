@@ -28,32 +28,33 @@ class AuthService {
         final name = user.userMetadata?['name'] as String? ?? 'User';
         print('User metadata - name: $name');
         
-        try {
+        // try {
           // Check if profile exists
-          final existingProfile = await _userService.getProfile(user.id);
-          print('Existing profile found: ${existingProfile.name}');
-          
-          // If profile exists but name is different, update it
-          if (existingProfile.name != name) {
-            print('Updating profile name to match metadata');
-            await _userService.updateProfile(Profile(
-              id: user.id,
-              name: name,
-              avatarUrl: existingProfile.avatarUrl,
-              createdAt: existingProfile.createdAt,
-              updatedAt: DateTime.now(),
-            ));
-          }
-        } catch (e) {
-          print('No existing profile found, creating initial data');
-          try {
-            await _userService.createInitialUserData(user, name);
-            print('Initial user data created successfully');
-          } catch (dataError) {
-            print('Error creating initial user data: $dataError');
-            // Continue with sign in even if data creation fails
-          }
+        final existingProfile = await _userService.getProfile(user.id);
+        print('Existing profile found: ${existingProfile.name}');
+        
+        // If profile exists but name is different, update it
+        if (existingProfile.name != name) {
+          print('Updating profile name to match metadata');
+          await _userService.updateProfile(Profile(
+            id: user.id,
+            name: name,
+            avatarUrl: existingProfile.avatarUrl,
+            createdAt: existingProfile.createdAt,
+            updatedAt: DateTime.now(),
+          ));
         }
+        // } catch (e) {
+        //   print(e)
+        //   print('No existing profile found, creating initial data');
+        //   try {
+        //     await _userService.createInitialUserData(user, name);
+        //     print('Initial user data created successfully');
+        //   } catch (dataError) {
+        //     print('Error creating initial user data: $dataError');
+        //     // Continue with sign in even if data creation fails
+        //   }
+        // }
       }
       
       return response;

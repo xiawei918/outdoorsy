@@ -12,7 +12,14 @@ class UserService {
         .select()
         .eq('id', userId)
         .single();
-    return Profile.fromJson(response);
+        print('here: $response');
+    return Profile.fromJson({
+      'id': response['id'],
+      'name': response['name'],
+      'avatarUrl': response['avatar_url'],
+      'createdAt': response['created_at'],
+      'updatedAt': response['updated_at'],
+    });
   }
 
   Future<void> updateProfile(Profile profile) async {
@@ -21,7 +28,7 @@ class UserService {
         .upsert({
           'id': profile.id,
           'name': profile.name,
-          'avatar_url': profile.avatarUrl,
+          'avatar_url': profile.avatarUrl ?? null,
           'updated_at': DateTime.now().toIso8601String(),
         });
   }
@@ -65,6 +72,7 @@ class UserService {
       await _client.from('profiles').upsert({
         'id': user.id,
         'name': name,
+        'avatar_url': null,
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       });
