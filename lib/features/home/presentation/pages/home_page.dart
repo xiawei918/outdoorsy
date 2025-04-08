@@ -4,20 +4,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../timer/presentation/widgets/progress_ring.dart';
 import '../../../history/presentation/pages/history_page.dart';
 import '../../../history/presentation/providers/history_provider.dart';
-import '../../../history/domain/models/time_entry.dart';
 import '../../../stats/presentation/pages/stats_page.dart';
 import '../../../settings/presentation/pages/settings_page.dart';
 import '../../../settings/presentation/providers/settings_provider.dart';
 import '../../../settings/presentation/providers/location_provider.dart';
-import '../../../../core/providers/mock_data_provider.dart';
-import '../../../../core/providers/stats_provider.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/rounded_button.dart';
-import '../../../../core/widgets/settings_card.dart';
-import '../../../../core/widgets/settings_section.dart';
-import '../../../../core/widgets/settings_toggle.dart';
-import '../../../../core/widgets/settings_dropdown.dart';
+
 import '../../../auth/presentation/providers/auth_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
@@ -59,11 +50,6 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (mounted && !_hasRequestedLocation) {
         _requestLocationPermission();
       }
-    });
-
-    // Check for daily tip refresh
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _requestLocationPermission();
     });
   }
 
@@ -138,12 +124,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final locationState = ref.watch(locationProvider);
-    final stats = ref.watch(statsProvider);
-    final currentUser = ref.watch(currentUserProvider);
-    final authService = ref.watch(authServiceProvider);
-
-    // Mock data
-    final String sunsetTime = '7:30 PM';
     
     // Update settings with location if available
     if (locationState.locationString.isNotEmpty && settings.locationName.isEmpty) {
@@ -403,29 +383,33 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget _buildDailyTip() {
     final tipState = ref.watch(tipsProvider);
     
-    return Container(
-      height: 80, // Fixed height for the tip container
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Text(
-                tipState.tip,
-                style: Theme.of(context).textTheme.bodyLarge,
+    return SizedBox(
+      height: 96, // Fixed height (80 * 1.2 = 96)
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              const Icon(Icons.lightbulb_outline, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Text(
+                    tipState.tip,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ),
               ),
-            ),
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 20),
+                onPressed: () {
+                  ref.read(tipsProvider.notifier).refreshTip();
+                },
+                tooltip: 'Get another tip',
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(tipsProvider.notifier).refreshTip(),
-          ),
-        ],
+        ),
       ),
     );
   }

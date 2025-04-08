@@ -1,4 +1,3 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/config/supabase_config.dart';
 import '../../domain/models/time_entry.dart';
 
@@ -122,12 +121,5 @@ class TimeEntryService {
     } catch (e) {
       rethrow;
     }
-  }
-
-  DateTime _parseDateTime(dynamic value) {
-    if (value == null) return DateTime.now();
-    if (value is DateTime) return value;
-    if (value is String) return DateTime.parse(value);
-    throw Exception('Invalid date format: $value');
   }
 } 

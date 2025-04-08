@@ -30,6 +30,7 @@ class SunsetService {
       throw Exception('Failed to fetch sunset time');
     } catch (e) {
       print('Error fetching sunset time: $e');
+      // todo: handle when sunset service is not available
       return '7:30 PM'; // Fallback time
     }
   }

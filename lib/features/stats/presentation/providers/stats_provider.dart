@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../history/domain/models/time_entry.dart';
 import '../../../history/presentation/providers/history_provider.dart';
-import '../../../../core/providers/mock_data_provider.dart';
+import '../../../settings/presentation/providers/settings_provider.dart';
 
 class StatsState {
   final int totalSeconds;
@@ -66,13 +66,22 @@ class StatsNotifier extends StateNotifier<StatsState> {
         },
       );
     });
+
+    // Listen to changes in daily goal
+    _ref.listen(settingsProvider, (previous, next) {
+      if (previous?.dailyGoal != next.dailyGoal) {
+        _ref.read(historyProvider).whenData((entries) {
+          _updateStats(entries);
+        });
+      }
+    });
   }
 
   void _updateStats(List<TimeEntry> entries) {
     try {
-      // Get the daily goal from mock data (this is the same for both mock and real data)
-      final mockData = _ref.read(mockDataProvider);
-      final dailyGoal = mockData.dailyGoal;
+      // Get the daily goal from settings
+      final settings = _ref.read(settingsProvider);
+      final dailyGoal = settings.dailyGoal;
 
       // Calculate stats for the last 7 days
       final now = DateTime.now();
@@ -109,8 +118,15 @@ class StatsNotifier extends StateNotifier<StatsState> {
         currentDate = currentDate.subtract(const Duration(days: 1));
       }
 
-      // Calculate days that met the goal
-      final daysMetGoal = dateMap.values.where((duration) => duration >= dailyGoal).length;
+      // Calculate days that met the goal in the last 7 days
+      var daysMetGoal = 0;
+      for (var i = 0; i < 7; i++) {
+        final date = today.subtract(Duration(days: i));
+        final totalDuration = dateMap[date] ?? 0;
+        if (totalDuration >= dailyGoal) {
+          daysMetGoal++;
+        }
+      }
 
       state = state.copyWith(
         totalSeconds: totalSeconds,
