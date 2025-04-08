@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/config/supabase_config.dart';
-import '../../domain/models/user_settings.dart';
+import '../../../auth/domain/models/user_settings.dart';
 
 class SettingsService {
   final _supabase = SupabaseConfig.client;
@@ -32,12 +32,19 @@ class SettingsService {
           ? response['updated_at'] as DateTime 
           : DateTime.parse(response['updated_at'] as String);
 
-      return UserSettings.fromJson({
-        'userId': response['user_id'],
-        'dailyGoal': response['daily_goal'],
-        'locationName': response['location_name'] ?? '',
-        'updatedAt': updatedAt.toIso8601String(),
-      });
+      final lastStreakCheck = response['last_streak_check'] != null
+          ? (response['last_streak_check'] is DateTime 
+              ? response['last_streak_check'] as DateTime 
+              : DateTime.parse(response['last_streak_check'] as String))
+          : DateTime.now();
+
+      return UserSettings(
+        userId: response['user_id'],
+        dailyGoal: response['daily_goal'],
+        streak: response['streak'] ?? 0,
+        lastStreakCheck: lastStreakCheck,
+        updatedAt: updatedAt,
+      );
     } catch (e) {
       print('Error fetching settings: $e');
       return null;
@@ -47,14 +54,14 @@ class SettingsService {
   Future<void> updateUserSettings(UserSettings settings) async {
     try {
       print('Attempting to update settings for user: ${settings.userId}');
-      print('Settings to update: ${settings.toJson()}');
       
       final response = await _supabase
           .from('user_settings')
           .upsert({
             'user_id': settings.userId,
             'daily_goal': settings.dailyGoal,
-            'location_name': settings.locationName,
+            'streak': settings.streak,
+            'last_streak_check': settings.lastStreakCheck.toIso8601String(),
             'updated_at': settings.updatedAt.toIso8601String(),
           })
           .select()
@@ -75,7 +82,8 @@ class SettingsService {
     final defaultSettings = UserSettings(
       userId: userId,
       dailyGoal: 30 * 60, // 30 minutes in seconds
-      locationName: '',
+      streak: 0,
+      lastStreakCheck: DateTime.now(),
       updatedAt: DateTime.now(),
     );
 

@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers/mock_data_provider.dart';
-import '../../domain/models/user_settings.dart';
+import '../../../auth/domain/models/user_settings.dart';
 import '../../data/services/settings_service.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/location_provider.dart';
@@ -14,12 +14,16 @@ class SettingsState {
   final String locationName;
   final bool isLoading;
   final String? error;
+  final int streak;
+  final DateTime? lastStreakCheck;
 
   SettingsState({
     required this.dailyGoal,
     required this.locationName,
     this.isLoading = false,
     this.error,
+    required this.streak,
+    required this.lastStreakCheck,
   });
 
   SettingsState copyWith({
@@ -27,12 +31,16 @@ class SettingsState {
     String? locationName,
     bool? isLoading,
     String? error,
+    int? streak,
+    DateTime? lastStreakCheck,
   }) {
     return SettingsState(
       dailyGoal: dailyGoal ?? this.dailyGoal,
       locationName: locationName ?? this.locationName,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
+      streak: streak ?? this.streak,
+      lastStreakCheck: lastStreakCheck ?? this.lastStreakCheck,
     );
   }
 }
@@ -46,6 +54,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     dailyGoal: 30 * 60, // Start with default 30 minutes in seconds
     locationName: '',
     isLoading: true,
+    streak: 0,
+    lastStreakCheck: null,
   )) {
     _initialize();
   }
@@ -117,7 +127,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         final defaultSettings = UserSettings(
           userId: userId,
           dailyGoal: 30 * 60, // 30 minutes in seconds
-          locationName: '',
+          streak: 0,
+          lastStreakCheck: DateTime.now(),
           updatedAt: DateTime.now(),
         );
         await _ref.read(settingsServiceProvider).updateUserSettings(defaultSettings);
@@ -125,10 +136,11 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         // After creating default settings, load them again to ensure we have the saved values
         final savedSettings = await _ref.read(settingsServiceProvider).getUserSettings(userId);
         if (savedSettings != null) {
-          print('Loaded saved settings: ${savedSettings.toJson()}');
           state = state.copyWith(
             dailyGoal: savedSettings.dailyGoal,
-            locationName: savedSettings.locationName,
+            locationName: state.locationName,
+            streak: savedSettings.streak,
+            lastStreakCheck: savedSettings.lastStreakCheck,
             isLoading: false,
           );
           _lastKnownDailyGoal = savedSettings.dailyGoal;
@@ -136,16 +148,19 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
           print('Failed to load saved settings, using defaults');
           state = state.copyWith(
             dailyGoal: defaultSettings.dailyGoal,
-            locationName: defaultSettings.locationName,
+            locationName: state.locationName,
+            streak: defaultSettings.streak,
+            lastStreakCheck: defaultSettings.lastStreakCheck,
             isLoading: false,
           );
           _lastKnownDailyGoal = defaultSettings.dailyGoal;
         }
       } else {
-        print('Loaded existing settings: ${settings.toJson()}');
         state = state.copyWith(
           dailyGoal: settings.dailyGoal,
-          locationName: settings.locationName,
+          locationName: state.locationName,
+          streak: settings.streak,
+          lastStreakCheck: settings.lastStreakCheck,
           isLoading: false,
         );
         _lastKnownDailyGoal = settings.dailyGoal;
@@ -172,7 +187,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
           final settings = UserSettings(
             userId: user.id,
             dailyGoal: newGoal,
-            locationName: state.locationName,
+            streak: state.streak,
+            lastStreakCheck: state.lastStreakCheck ?? DateTime.now(),
             updatedAt: DateTime.now(),
           );
           await _ref.read(settingsServiceProvider).updateUserSettings(settings);
@@ -199,13 +215,6 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
             return; // Don't update if we don't have a valid daily goal
           }
           
-          final settings = UserSettings(
-            userId: user.id,
-            dailyGoal: dailyGoal,
-            locationName: location,
-            updatedAt: DateTime.now(),
-          );
-          await _ref.read(settingsServiceProvider).updateUserSettings(settings);
           state = state.copyWith(locationName: location);
         }
       }
