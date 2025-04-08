@@ -141,7 +141,9 @@ class _HomePageState extends ConsumerState<HomePage> {
     
     // Update settings with location if available
     if (locationState.locationString.isNotEmpty && settings.locationName.isEmpty) {
-      ref.read(settingsProvider.notifier).updateLocation(locationState.locationString);
+      Future.microtask(() {
+        ref.read(settingsProvider.notifier).updateLocation(locationState.locationString);
+      });
     }
 
     return Scaffold(

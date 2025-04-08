@@ -56,11 +56,13 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       // Use mock data if no user is authenticated
       _isUsingMockData = true;
       final mockData = _ref.read(mockDataProvider);
-      state = state.copyWith(
-        dailyGoal: mockData.dailyGoal,
-        locationName: '',
-        isLoading: false,
-      );
+      Future.microtask(() {
+        state = state.copyWith(
+          dailyGoal: mockData.dailyGoal,
+          locationName: '',
+          isLoading: false,
+        );
+      });
     } else {
       // Use real data for authenticated users
       _isUsingMockData = false;
@@ -73,11 +75,13 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         // Switch to mock data when user signs out
         _isUsingMockData = true;
         final mockData = _ref.read(mockDataProvider);
-        state = state.copyWith(
-          dailyGoal: mockData.dailyGoal,
-          locationName: '',
-          isLoading: false,
-        );
+        Future.microtask(() {
+          state = state.copyWith(
+            dailyGoal: mockData.dailyGoal,
+            locationName: '',
+            isLoading: false,
+          );
+        });
       } else {
         // Switch to real data when user signs in
         _isUsingMockData = false;
