@@ -102,13 +102,8 @@ class StatsNotifier extends StateNotifier<StatsState> {
       int currentStreak = 0;
       DateTime currentDate = today;
       while (true) {
-        final hasEntry = entries.any((entry) => 
-          entry.date.year == currentDate.year &&
-          entry.date.month == currentDate.month &&
-          entry.date.day == currentDate.day
-        );
-        
-        if (!hasEntry) break;
+        final totalDuration = dateMap[currentDate] ?? 0;
+        if (totalDuration < dailyGoal) break;
         
         currentStreak++;
         currentDate = currentDate.subtract(const Duration(days: 1));

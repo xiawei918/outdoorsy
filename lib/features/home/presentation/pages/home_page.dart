@@ -22,6 +22,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
 import '../providers/sunset_provider.dart';
+import '../../../../core/providers/tips_provider.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -58,6 +59,11 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (mounted && !_hasRequestedLocation) {
         _requestLocationPermission();
       }
+    });
+
+    // Check for daily tip refresh
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestLocationPermission();
     });
   }
 
@@ -366,7 +372,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.wb_sunny, size: 24),
+        const Icon(Icons.wb_twilight, size: 24),
         const SizedBox(width: 8),
         if (locationState.isLoading || sunsetTimeAsync.isLoading)
           const SizedBox(
@@ -395,21 +401,31 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildDailyTip() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            const Icon(Icons.lightbulb_outline, size: 24),
-            const SizedBox(width: 12),
-            Expanded(
+    final tipState = ref.watch(tipsProvider);
+    
+    return Container(
+      height: 80, // Fixed height for the tip container
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
               child: Text(
-                'Stay hydrated and bring water with you',
+                tipState.tip,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
             ),
-          ],
-        ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => ref.read(tipsProvider.notifier).refreshTip(),
+          ),
+        ],
       ),
     );
   }

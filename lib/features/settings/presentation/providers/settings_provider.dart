@@ -40,9 +40,10 @@ class SettingsState {
 class SettingsNotifier extends StateNotifier<SettingsState> {
   final Ref _ref;
   bool _isUsingMockData = false;
+  int? _lastKnownDailyGoal;  // Add this to track the last known daily goal
 
   SettingsNotifier(this._ref) : super(SettingsState(
-    dailyGoal: 0, // Start with 0, will be updated in _initialize
+    dailyGoal: 30 * 60, // Start with default 30 minutes in seconds
     locationName: '',
     isLoading: true,
   )) {
@@ -50,51 +51,58 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   }
 
   Future<void> _initialize() async {
-    final user = _ref.read(currentUserProvider);
-    
-    if (user == null) {
-      // Use mock data if no user is authenticated
-      _isUsingMockData = true;
-      final mockData = _ref.read(mockDataProvider);
-      Future.microtask(() {
+    try {
+      final user = _ref.read(currentUserProvider);
+      
+      if (user == null) {
+        // Use mock data if no user is authenticated
+        _isUsingMockData = true;
+        final mockData = _ref.read(mockDataProvider);
         state = state.copyWith(
           dailyGoal: mockData.dailyGoal,
           locationName: '',
           isLoading: false,
         );
-      });
-    } else {
-      // Use real data for authenticated users
-      _isUsingMockData = false;
-      await _loadUserSettings(user.id);
-    }
+        _lastKnownDailyGoal = mockData.dailyGoal;
+      } else {
+        // Use real data for authenticated users
+        _isUsingMockData = false;
+        await _loadUserSettings(user.id);
+      }
 
-    // Listen to auth state changes
-    _ref.listen(currentUserProvider, (previous, next) {
-      if (next == null) {
-        // Switch to mock data when user signs out
-        _isUsingMockData = true;
-        final mockData = _ref.read(mockDataProvider);
-        Future.microtask(() {
+      // Listen to auth state changes
+      _ref.listen(currentUserProvider, (previous, next) {
+        if (next == null) {
+          // Switch to mock data when user signs out
+          _isUsingMockData = true;
+          final mockData = _ref.read(mockDataProvider);
           state = state.copyWith(
             dailyGoal: mockData.dailyGoal,
             locationName: '',
             isLoading: false,
           );
-        });
-      } else {
-        // Switch to real data when user signs in
-        _isUsingMockData = false;
-        _loadUserSettings(next.id);
-      }
-    });
-    
-    // Listen to location changes
-    _ref.listen(locationProvider, (previous, next) {
-      if (next.locationString.isNotEmpty && state.locationName.isEmpty) {
-        updateLocation(next.locationString);
-      }
-    });
+          _lastKnownDailyGoal = mockData.dailyGoal;
+        } else {
+          // Switch to real data when user signs in
+          _isUsingMockData = false;
+          _loadUserSettings(next.id);
+        }
+      });
+      
+      // Listen to location changes
+      _ref.listen(locationProvider, (previous, next) {
+        if (next.locationString.isNotEmpty && state.locationName.isEmpty) {
+          updateLocation(next.locationString);
+        }
+      });
+    } catch (error) {
+      print('Error during settings initialization: $error');
+      // Keep the current state if there's an error
+      state = state.copyWith(
+        isLoading: false,
+        error: error.toString(),
+      );
+    }
   }
 
   Future<void> _loadUserSettings(String userId) async {
@@ -123,6 +131,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
             locationName: savedSettings.locationName,
             isLoading: false,
           );
+          _lastKnownDailyGoal = savedSettings.dailyGoal;
         } else {
           print('Failed to load saved settings, using defaults');
           state = state.copyWith(
@@ -130,6 +139,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
             locationName: defaultSettings.locationName,
             isLoading: false,
           );
+          _lastKnownDailyGoal = defaultSettings.dailyGoal;
         }
       } else {
         print('Loaded existing settings: ${settings.toJson()}');
@@ -138,9 +148,11 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
           locationName: settings.locationName,
           isLoading: false,
         );
+        _lastKnownDailyGoal = settings.dailyGoal;
       }
     } catch (error) {
       print('Error loading settings: $error');
+      // Keep the current state if there's an error
       state = state.copyWith(
         error: error.toString(),
         isLoading: false,
@@ -153,6 +165,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       final newGoal = minutes * 60; // Convert minutes to seconds
       if (_isUsingMockData) {
         state = state.copyWith(dailyGoal: newGoal);
+        _lastKnownDailyGoal = newGoal;
       } else {
         final user = _ref.read(currentUserProvider);
         if (user != null) {
@@ -164,6 +177,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
           );
           await _ref.read(settingsServiceProvider).updateUserSettings(settings);
           state = state.copyWith(dailyGoal: newGoal);
+          _lastKnownDailyGoal = newGoal;
         }
       }
     } catch (error) {
@@ -178,9 +192,16 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       } else {
         final user = _ref.read(currentUserProvider);
         if (user != null) {
+          // Use the last known daily goal or current state, whichever is non-zero
+          final dailyGoal = _lastKnownDailyGoal ?? state.dailyGoal;
+          if (dailyGoal == 0) {
+            print('Warning: Attempting to update location with zero daily goal');
+            return; // Don't update if we don't have a valid daily goal
+          }
+          
           final settings = UserSettings(
             userId: user.id,
-            dailyGoal: state.dailyGoal,
+            dailyGoal: dailyGoal,
             locationName: location,
             updatedAt: DateTime.now(),
           );
