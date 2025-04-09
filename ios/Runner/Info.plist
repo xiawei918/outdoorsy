@@ -49,5 +49,16 @@
 	<string>This app needs access to location to provide accurate sunset times for your area.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>This app needs access to location to provide accurate sunset times for your area.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>io.supabase.outdoor</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>outdoor</string>
+		</dict>
+	</array>
 </dict>
 </plist>

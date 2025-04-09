@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'core/config/supabase_config.dart';
-import 'core/config/router_config.dart';
+import 'features/auth/presentation/pages/auth_page.dart';
+import 'features/home/presentation/pages/home_page.dart';
+import 'features/settings/presentation/pages/settings_page.dart';
+import 'features/history/presentation/pages/history_page.dart';
+import 'features/auth/presentation/providers/auth_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +32,8 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final router = ref.watch(routerProvider);
+    // Watch the auth state changes
+    ref.watch(authStateProvider);
 
     return MaterialApp.router(
       title: 'Outdoor Time',
@@ -35,7 +41,69 @@ class MyApp extends ConsumerWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      routerConfig: router,
+      routerConfig: GoRouter(
+        initialLocation: '/',
+        routes: [
+          // Auth route (unprotected)
+          GoRoute(
+            path: '/auth',
+            builder: (context, state) => const AuthPage(),
+          ),
+          // Protected routes shell
+          ShellRoute(
+            builder: (context, state, child) {
+              // This will be our scaffold for all protected routes
+              return child;
+            },
+            routes: [
+              // Home route
+              GoRoute(
+                path: '/',
+                builder: (context, state) => const HomePage(),
+              ),
+              GoRoute(
+                path: '/settings',
+                builder: (context, state) => const SettingsPage(),
+              ),
+              GoRoute(
+                path: '/history',
+                builder: (context, state) => const HistoryPage(),
+              ),
+            ],
+          ),
+        ],
+        redirect: (context, state) {
+          // Get the current user
+          final user = ref.watch(currentUserProvider);
+          
+          // Handle deep links
+          if (state.uri.toString().startsWith('io.supabase.outdoor://')) {
+            if (state.uri.path == '/reset-password') {
+              return '/auth';
+            }
+            if (state.uri.path == '/login-callback') {
+              return '/';
+            }
+          }
+
+          // If user is not authenticated and trying to access a protected route
+          if (user == null) {
+            // Allow access to auth page
+            if (state.matchedLocation == '/auth') {
+              return null;
+            }
+            // Redirect to auth page for all other routes
+            return '/auth';
+          }
+
+          // If user is authenticated and trying to access auth page
+          if (user != null && state.matchedLocation == '/auth') {
+            return '/';
+          }
+
+          return null;
+        },
+      ),
     );
   }
 } 

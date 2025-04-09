@@ -22,6 +22,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isResetMode = false;
 
   @override
   void dispose() {
@@ -49,6 +50,42 @@ class _AuthPageState extends ConsumerState<AuthPage> {
           message: 'Signed in successfully!',
         );
         context.go('/');
+      }
+    } catch (e) {
+      if (mounted) {
+        Toast.show(
+          context: context,
+          message: e.toString(),
+          isError: true,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleResetPassword() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final authService = ref.read(authServiceProvider);
+      await authService.resetPassword(_emailController.text);
+      if (mounted) {
+        Toast.show(
+          context: context,
+          message: 'Password reset email sent! Please check your inbox.',
+        );
+        setState(() {
+          _isResetMode = false;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -131,10 +168,11 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     }
   }
 
-  void _handleSkip() {
-    final authService = ref.read(authServiceProvider);
-    authService.skipAuth();
-    context.go('/');
+  void _toggleResetMode() {
+    setState(() {
+      _isResetMode = !_isResetMode;
+      _passwordController.clear();
+    });
   }
 
   @override
@@ -168,7 +206,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                   children: [
                     // Header
                     Text(
-                      'Welcome to Outdoor Time',
+                      _isResetMode ? 'Reset Password' : 'Welcome to Outdoor Time',
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
@@ -177,7 +215,9 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Sign in to track your outdoor time',
+                      _isResetMode 
+                        ? 'Enter your email to receive a password reset link' 
+                        : 'Sign in to track your outdoor time',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: Colors.grey.shade600,
                       ),
@@ -206,153 +246,174 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Password field
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: Icon(Icons.lock_outline),
-                        hintText: '••••••••',
+                    // Password field (only show in sign in mode)
+                    if (!_isResetMode) ...[
+                      TextFormField(
+                        controller: _passwordController,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: Icon(Icons.lock_outline),
+                          hintText: '••••••••',
+                        ),
+                        obscureText: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your password';
+                          }
+                          if (value.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
+                          return null;
+                        },
                       ),
-                      obscureText: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 8),
+                      
+                      // Forgot password link
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _isLoading ? null : _toggleResetMode,
+                          child: const Text('Forgot Password?'),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
-                    // Sign in button
+                    // Action button
                     RoundedButton(
-                      onPressed: _isLoading ? () {} : _handleEmailSignIn,
-                      text: _isLoading ? 'Loading...' : 'Sign in',
+                      onPressed: _isLoading 
+                        ? () {} 
+                        : (_isResetMode ? _handleResetPassword : _handleEmailSignIn),
+                      text: _isLoading 
+                        ? 'Loading...' 
+                        : (_isResetMode ? 'Send Reset Link' : 'Sign in'),
                     ),
-                    const SizedBox(height: 16),
+                    
+                    // Back to sign in link (only in reset mode)
+                    if (_isResetMode) ...[
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: _isLoading ? null : _toggleResetMode,
+                        child: const Text('Back to Sign In'),
+                      ),
+                    ],
+                    
+                    if (!_isResetMode) ...[
+                      const SizedBox(height: 16),
 
-                    // Divider
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Divider(
-                            color: Colors.grey.shade200,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'Or',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey.shade500,
+                      // Divider
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Divider(
+                              color: Colors.grey.shade200,
                             ),
                           ),
-                        ),
-                        Expanded(
-                          child: Divider(
-                            color: Colors.grey.shade200,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'Or',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Google sign in button
-                    OutlinedButton(
-                      onPressed: _isLoading ? null : _handleGoogleSignIn,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SvgPicture.asset(
-                            'assets/images/google_logo.svg',
-                            width: 20,
-                            height: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Continue with Google',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                          Expanded(
+                            child: Divider(
+                              color: Colors.grey.shade200,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 12),
+                      const SizedBox(height: 16),
 
-                    // Apple sign in button
-                    OutlinedButton(
-                      onPressed: _isLoading ? null : _handleAppleSignIn,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                      // Google sign in button
+                      OutlinedButton(
+                        onPressed: _isLoading ? null : _handleGoogleSignIn,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SvgPicture.asset(
+                              'assets/images/google_logo.svg',
+                              width: 20,
+                              height: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Continue with Google',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SvgPicture.asset(
-                            'assets/images/apple_logo.svg',
-                            width: 20,
-                            height: 20,
-                            colorFilter: const ColorFilter.mode(
-                              Colors.black,
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Continue with Apple',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 12),
 
-                    // Sign up link
-                    Text.rich(
-                      TextSpan(
-                        text: "Don't have an account? ",
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey.shade600,
+                      // Apple sign in button
+                      OutlinedButton(
+                        onPressed: _isLoading ? null : _handleAppleSignIn,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
-                        children: [
-                          TextSpan(
-                            text: 'Sign up',
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SvgPicture.asset(
+                              'assets/images/apple_logo.svg',
+                              width: 20,
+                              height: 20,
+                              colorFilter: const ColorFilter.mode(
+                                Colors.black,
+                                BlendMode.srcIn,
+                              ),
                             ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () => context.go('/signup'),
-                          ),
-                        ],
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Continue with Apple',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
+                      const SizedBox(height: 24),
 
-                    // Skip button
-                    TextButton(
-                      onPressed: _isLoading ? null : _handleSkip,
-                      child: const Text('Skip for now'),
-                    ),
+                      // Sign up link
+                      Text.rich(
+                        TextSpan(
+                          text: "Don't have an account? ",
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: Colors.grey.shade600,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'Sign up',
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () => context.go('/signup'),
+                            ),
+                          ],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ],
                 ),
               ),

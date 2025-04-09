@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/models/time_entry.dart';
-import '../../../../core/providers/mock_data_provider.dart';
 import '../../../../features/auth/presentation/providers/auth_provider.dart';
 import '../../data/services/time_entry_service.dart';
 
@@ -15,7 +14,6 @@ final historyProvider = StateNotifierProvider<HistoryNotifier, AsyncValue<List<T
 
 class HistoryNotifier extends StateNotifier<AsyncValue<List<TimeEntry>>> {
   final Ref _ref;
-  bool _isUsingMockData = false;
 
   HistoryNotifier(this._ref) : super(const AsyncValue.loading()) {
     _initialize();
@@ -28,27 +26,17 @@ class HistoryNotifier extends StateNotifier<AsyncValue<List<TimeEntry>>> {
     // Get the current user
     final user = _ref.read(currentUserProvider);
     
-    if (user == null) {
-      // Use mock data if no user is authenticated
-      _isUsingMockData = true;
-      final mockData = _ref.read(mockDataProvider);
-      state = AsyncValue.data(List<TimeEntry>.from(mockData.timeEntries));
-    } else {
-      // Use real data for authenticated users
-      _isUsingMockData = false;
+    if (user != null) {
       await _loadUserEntries(user.id);
+    } else {
+      state = const AsyncValue.data([]);
     }
 
     // Listen to auth state changes
     _ref.listen(currentUserProvider, (previous, next) {
       if (next == null) {
-        // Switch to mock data when user signs out
-        _isUsingMockData = true;
-        final mockData = _ref.read(mockDataProvider);
-        state = AsyncValue.data(List<TimeEntry>.from(mockData.timeEntries));
+        state = const AsyncValue.data([]);
       } else if (previous?.id != next.id) {
-        // Switch to real data when user signs in
-        _isUsingMockData = false;
         _loadUserEntries(next.id);
       }
     });
@@ -70,91 +58,49 @@ class HistoryNotifier extends StateNotifier<AsyncValue<List<TimeEntry>>> {
     required bool isManual,
   }) async {
     final user = _ref.read(currentUserProvider);
-    final now = DateTime.now();
+    if (user == null) return;
 
-    if (_isUsingMockData) {
-      // Add to mock data
-      final entry = TimeEntry(
-        id: const Uuid().v4(),
-        userId: 'mock-user',
+    try {
+      final entry = await _ref.read(timeEntryServiceProvider).addTimeEntry(
+        userId: user.id,
         startTime: date,
-        endTime: date,
-        duration: duration,
         date: date,
+        duration: duration,
+        endTime: date,
         isManual: isManual,
-        createdAt: now,
       );
       final currentEntries = state.value ?? [];
-      final updatedEntries = [...currentEntries, entry];
-      state = AsyncValue.data(updatedEntries);
-      _ref.read(mockDataProvider.notifier).updateTimeEntries(updatedEntries);
-    } else if (user != null) {
-      // Add to Supabase
-      try {
-        final entry = await _ref.read(timeEntryServiceProvider).addTimeEntry(
-          userId: user.id,
-          startTime: date,
-          date: date,
-          duration: duration,
-          endTime: date,
-          isManual: isManual,
-        );
-        final currentEntries = state.value ?? [];
-        state = AsyncValue.data([...currentEntries, entry]);
-      } catch (error, stackTrace) {
-        state = AsyncValue.error(error, stackTrace);
-      }
+      state = AsyncValue.data([...currentEntries, entry]);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
     }
   }
 
   Future<void> deleteEntry(String id) async {
-    if (_isUsingMockData) {
-      // Delete from mock data
+    try {
+      await _ref.read(timeEntryServiceProvider).deleteTimeEntry(id);
       final currentEntries = state.value ?? [];
-      final updatedEntries = currentEntries.where((entry) => entry.id != id).toList();
-      state = AsyncValue.data(updatedEntries);
-      _ref.read(mockDataProvider.notifier).updateTimeEntries(updatedEntries);
-    } else {
-      // Delete from Supabase
-      try {
-        await _ref.read(timeEntryServiceProvider).deleteTimeEntry(id);
-        final currentEntries = state.value ?? [];
-        state = AsyncValue.data(currentEntries.where((entry) => entry.id != id).toList());
-      } catch (error, stackTrace) {
-        state = AsyncValue.error(error, stackTrace);
-      }
+      state = AsyncValue.data(currentEntries.where((entry) => entry.id != id).toList());
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
     }
   }
 
   Future<void> editEntry(String id, int newDuration) async {
-    if (_isUsingMockData) {
-      // Edit mock data
+    try {
+      final updatedEntry = await _ref.read(timeEntryServiceProvider).updateTimeEntry(
+        id: id,
+        duration: newDuration,
+      );
       final currentEntries = state.value ?? [];
-      final updatedEntries = currentEntries.map((entry) {
+      state = AsyncValue.data(currentEntries.map((entry) {
         if (entry.id == id) {
-          return entry.copyWith(duration: newDuration);
+          return updatedEntry;
         }
         return entry;
-      }).toList();
-      state = AsyncValue.data(updatedEntries);
-      _ref.read(mockDataProvider.notifier).updateTimeEntries(updatedEntries);
-    } else {
-      // Edit in Supabase
-      try {
-        final updatedEntry = await _ref.read(timeEntryServiceProvider).updateTimeEntry(
-          id: id,
-          duration: newDuration,
-        );
-        final currentEntries = state.value ?? [];
-        state = AsyncValue.data(currentEntries.map((entry) {
-          if (entry.id == id) {
-            return updatedEntry;
-          }
-          return entry;
-        }).toList());
-      } catch (error, stackTrace) {
-        state = AsyncValue.error(error, stackTrace);
-      }
+      }).toList());
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
     }
   }
 

@@ -6,13 +6,11 @@ import '../../domain/models/profile.dart';
 class AuthService {
   final _auth = SupabaseConfig.auth;
   final _userService = UserService();
-  User? _skippedUser;
 
   Future<AuthResponse> signInWithEmail({
     required String email,
     required String password,
   }) async {
-    _skippedUser = null;
     print('Starting sign in process for email: $email');
     
     try {
@@ -68,7 +66,6 @@ class AuthService {
     required String password,
     required String name,
   }) async {
-    _skippedUser = null;
     print('Starting sign up process for email: $email, name: $name');
     
     try {
@@ -140,8 +137,34 @@ class AuthService {
     }
   }
 
+  Future<void> resetPassword(String email) async {
+    print('Sending password reset email to: $email');
+    
+    try {
+      await _auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'io.supabase.outdoor://reset-password/',
+      );
+      print('Password reset email sent successfully');
+    } catch (e) {
+      print('Error sending password reset email: $e');
+      if (e is AuthException) {
+        print('Auth error details:');
+        print('Status code: ${e.statusCode}');
+        print('Message: ${e.message}');
+        
+        // Handle specific error cases
+        if (e.message.contains('not found')) {
+          throw Exception('No account found with this email address.');
+        } else if (e.message.contains('rate limit')) {
+          throw Exception('Too many requests. Please try again later.');
+        }
+      }
+      rethrow;
+    }
+  }
+
   Future<void> signInWithGoogle() async {
-    _skippedUser = null;
     final response = await _auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: 'io.supabase.outdoor://login-callback/',
@@ -160,7 +183,6 @@ class AuthService {
   }
 
   Future<void> signInWithApple() async {
-    _skippedUser = null;
     final response = await _auth.signInWithOAuth(
       OAuthProvider.apple,
       redirectTo: 'io.supabase.outdoor://login-callback/',
@@ -178,41 +200,16 @@ class AuthService {
     }
   }
 
-  void skipAuth() {
-    _skippedUser = User(
-      id: 'mock-user',
-      appMetadata: {},
-      userMetadata: {'name': 'Guest User'},
-      aud: 'authenticated',
-      createdAt: DateTime.now().toIso8601String(),
-    );
-  }
-
   Future<void> signOut() async {
     try {
-      // Clear the skipped user first
-      _skippedUser = null;
-      
-      // Sign out from Supabase
       await _auth.signOut();
-      
-      // Create a new skipped user for guest mode
-      skipAuth();
     } catch (e) {
-      // If there's an error, still try to set up guest mode
-      skipAuth();
+      print('Error during sign out: $e');
       rethrow;
     }
   }
 
-  User? get currentUser {
-    // If we have a Supabase user, return that
-    if (_auth.currentUser != null) {
-      return _auth.currentUser;
-    }
-    // Otherwise return the skipped user
-    return _skippedUser;
-  }
+  User? get currentUser => _auth.currentUser;
 
   Stream<AuthState> get authStateChanges => _auth.onAuthStateChange;
 } 

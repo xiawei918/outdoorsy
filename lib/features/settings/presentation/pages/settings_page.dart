@@ -3,18 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
-import '../../../../core/providers/mock_data_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/location_provider.dart';
 import '../providers/location_suggestions_provider.dart';
-import '../../../../core/providers/stats_provider.dart';
+import '../../../stats/presentation/providers/stats_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/rounded_button.dart';
 import '../../../../core/widgets/settings_card.dart';
 import '../../../../core/widgets/settings_section.dart';
-import '../../../../core/widgets/settings_toggle.dart';
-import '../../../../core/widgets/settings_dropdown.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {

@@ -13,10 +13,6 @@ final authStateProvider = StreamProvider<User?>((ref) {
     if (event.session != null) {
       return event.session!.user;
     }
-    // If there's no session but we have a skipped user, return that
-    if (authService.currentUser?.id == 'mock-user') {
-      return authService.currentUser;
-    }
     // Otherwise return null
     return null;
   });
@@ -26,7 +22,7 @@ final currentUserProvider = Provider<User?>((ref) {
   final authState = ref.watch(authStateProvider);
   return authState.when(
     data: (user) => user,
-    loading: () => ref.read(authServiceProvider).currentUser,
+    loading: () => null, // Return null during loading to ensure protection
     error: (_, __) => null,
   );
 }); 

@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/providers/mock_data_provider.dart';
 import '../../../auth/domain/models/user_settings.dart';
 import '../../data/services/settings_service.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -47,8 +46,7 @@ class SettingsState {
 
 class SettingsNotifier extends StateNotifier<SettingsState> {
   final Ref _ref;
-  bool _isUsingMockData = false;
-  int? _lastKnownDailyGoal;  // Add this to track the last known daily goal
+  int? _lastKnownDailyGoal;
 
   SettingsNotifier(this._ref) : super(SettingsState(
     dailyGoal: 30 * 60, // Start with default 30 minutes in seconds
@@ -64,37 +62,27 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     try {
       final user = _ref.read(currentUserProvider);
       
-      if (user == null) {
-        // Use mock data if no user is authenticated
-        _isUsingMockData = true;
-        final mockData = _ref.read(mockDataProvider);
+      if (user != null) {
+        await _loadUserSettings(user.id);
+      } else {
         state = state.copyWith(
-          dailyGoal: mockData.dailyGoal,
+          dailyGoal: 30 * 60, // Default 30 minutes
           locationName: '',
           isLoading: false,
         );
-        _lastKnownDailyGoal = mockData.dailyGoal;
-      } else {
-        // Use real data for authenticated users
-        _isUsingMockData = false;
-        await _loadUserSettings(user.id);
+        _lastKnownDailyGoal = 30 * 60;
       }
 
       // Listen to auth state changes
       _ref.listen(currentUserProvider, (previous, next) {
         if (next == null) {
-          // Switch to mock data when user signs out
-          _isUsingMockData = true;
-          final mockData = _ref.read(mockDataProvider);
           state = state.copyWith(
-            dailyGoal: mockData.dailyGoal,
+            dailyGoal: 30 * 60, // Default 30 minutes
             locationName: '',
             isLoading: false,
           );
-          _lastKnownDailyGoal = mockData.dailyGoal;
+          _lastKnownDailyGoal = 30 * 60;
         } else {
-          // Switch to real data when user signs in
-          _isUsingMockData = false;
           _loadUserSettings(next.id);
         }
       });
@@ -106,23 +94,19 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         }
       });
     } catch (error) {
-      print('Error during settings initialization: $error');
-      // Keep the current state if there's an error
       state = state.copyWith(
-        isLoading: false,
         error: error.toString(),
+        isLoading: false,
       );
     }
   }
 
   Future<void> _loadUserSettings(String userId) async {
     try {
-      print('Loading settings for user: $userId');
       state = state.copyWith(isLoading: true);
       final settings = await _ref.read(settingsServiceProvider).getUserSettings(userId);
       
       if (settings == null) {
-        print('No settings found, creating defaults');
         // Create default settings if none exist
         final defaultSettings = UserSettings(
           userId: userId,
@@ -130,31 +114,18 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
           streak: 0,
           lastStreakCheck: DateTime.now(),
           updatedAt: DateTime.now(),
+          locationName: '',
         );
         await _ref.read(settingsServiceProvider).updateUserSettings(defaultSettings);
         
-        // After creating default settings, load them again to ensure we have the saved values
-        final savedSettings = await _ref.read(settingsServiceProvider).getUserSettings(userId);
-        if (savedSettings != null) {
-          state = state.copyWith(
-            dailyGoal: savedSettings.dailyGoal,
-            locationName: savedSettings.locationName,
-            streak: savedSettings.streak,
-            lastStreakCheck: savedSettings.lastStreakCheck,
-            isLoading: false,
-          );
-          _lastKnownDailyGoal = savedSettings.dailyGoal;
-        } else {
-          print('Failed to load saved settings, using defaults');
-          state = state.copyWith(
-            dailyGoal: defaultSettings.dailyGoal,
-            locationName: '',
-            streak: defaultSettings.streak,
-            lastStreakCheck: defaultSettings.lastStreakCheck,
-            isLoading: false,
-          );
-          _lastKnownDailyGoal = defaultSettings.dailyGoal;
-        }
+        state = state.copyWith(
+          dailyGoal: defaultSettings.dailyGoal,
+          locationName: defaultSettings.locationName,
+          streak: defaultSettings.streak,
+          lastStreakCheck: defaultSettings.lastStreakCheck,
+          isLoading: false,
+        );
+        _lastKnownDailyGoal = defaultSettings.dailyGoal;
       } else {
         state = state.copyWith(
           dailyGoal: settings.dailyGoal,
@@ -167,7 +138,6 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       }
     } catch (error) {
       print('Error loading settings: $error');
-      // Keep the current state if there's an error
       state = state.copyWith(
         error: error.toString(),
         isLoading: false,
@@ -178,24 +148,19 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   Future<void> updateDailyGoal(int minutes) async {
     try {
       final newGoal = minutes * 60; // Convert minutes to seconds
-      if (_isUsingMockData) {
+      final user = _ref.read(currentUserProvider);
+      if (user != null) {
+        final settings = UserSettings(
+          userId: user.id,
+          dailyGoal: newGoal,
+          streak: state.streak,
+          lastStreakCheck: state.lastStreakCheck ?? DateTime.now(),
+          updatedAt: DateTime.now(),
+          locationName: state.locationName,
+        );
+        await _ref.read(settingsServiceProvider).updateUserSettings(settings);
         state = state.copyWith(dailyGoal: newGoal);
         _lastKnownDailyGoal = newGoal;
-      } else {
-        final user = _ref.read(currentUserProvider);
-        if (user != null) {
-          final settings = UserSettings(
-            userId: user.id,
-            dailyGoal: newGoal,
-            streak: state.streak,
-            lastStreakCheck: state.lastStreakCheck ?? DateTime.now(),
-            updatedAt: DateTime.now(),
-            locationName: state.locationName,
-          );
-          await _ref.read(settingsServiceProvider).updateUserSettings(settings);
-          state = state.copyWith(dailyGoal: newGoal);
-          _lastKnownDailyGoal = newGoal;
-        }
       }
     } catch (error) {
       state = state.copyWith(error: error.toString());
@@ -204,39 +169,35 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
 
   Future<void> updateLocation(String location) async {
     try {
-      if (_isUsingMockData) {
-        state = state.copyWith(locationName: location);
-      } else {
-        final user = _ref.read(currentUserProvider);
-        if (user != null) {
-          // First, fetch the current settings from Supabase to ensure we have the latest data
-          final currentSettings = await _ref.read(settingsServiceProvider).getUserSettings(user.id);
-          
-          if (currentSettings == null) {
-            print('Warning: No settings found when updating location');
-            return;
-          }
-          
-          // Create updated settings with the new location, preserving the existing daily goal
-          final settings = UserSettings(
-            userId: user.id,
-            dailyGoal: currentSettings.dailyGoal, // Use the daily goal from Supabase
-            streak: currentSettings.streak,
-            lastStreakCheck: currentSettings.lastStreakCheck,
-            updatedAt: DateTime.now(),
-            locationName: location,
-          );
-          
-          // Update settings in Supabase
-          await _ref.read(settingsServiceProvider).updateUserSettings(settings);
-          
-          // Update local state
-          state = state.copyWith(
-            locationName: location,
-            dailyGoal: currentSettings.dailyGoal, // Update the daily goal in the state
-          );
-          _lastKnownDailyGoal = currentSettings.dailyGoal; // Update the last known daily goal
+      final user = _ref.read(currentUserProvider);
+      if (user != null) {
+        // First, fetch the current settings from Supabase to ensure we have the latest data
+        final currentSettings = await _ref.read(settingsServiceProvider).getUserSettings(user.id);
+        
+        if (currentSettings == null) {
+          print('Warning: No settings found when updating location');
+          return;
         }
+        
+        // Create updated settings with the new location, preserving the existing daily goal
+        final settings = UserSettings(
+          userId: user.id,
+          dailyGoal: currentSettings.dailyGoal,
+          streak: currentSettings.streak,
+          lastStreakCheck: currentSettings.lastStreakCheck,
+          updatedAt: DateTime.now(),
+          locationName: location,
+        );
+        
+        // Update settings in Supabase
+        await _ref.read(settingsServiceProvider).updateUserSettings(settings);
+        
+        // Update local state
+        state = state.copyWith(
+          locationName: location,
+          dailyGoal: currentSettings.dailyGoal,
+        );
+        _lastKnownDailyGoal = currentSettings.dailyGoal;
       }
     } catch (error) {
       state = state.copyWith(error: error.toString());
