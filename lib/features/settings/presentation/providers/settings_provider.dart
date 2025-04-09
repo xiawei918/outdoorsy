@@ -138,7 +138,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         if (savedSettings != null) {
           state = state.copyWith(
             dailyGoal: savedSettings.dailyGoal,
-            locationName: state.locationName,
+            locationName: savedSettings.locationName,
             streak: savedSettings.streak,
             lastStreakCheck: savedSettings.lastStreakCheck,
             isLoading: false,
@@ -148,7 +148,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
           print('Failed to load saved settings, using defaults');
           state = state.copyWith(
             dailyGoal: defaultSettings.dailyGoal,
-            locationName: state.locationName,
+            locationName: '',
             streak: defaultSettings.streak,
             lastStreakCheck: defaultSettings.lastStreakCheck,
             isLoading: false,
@@ -158,7 +158,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       } else {
         state = state.copyWith(
           dailyGoal: settings.dailyGoal,
-          locationName: state.locationName,
+          locationName: settings.locationName,
           streak: settings.streak,
           lastStreakCheck: settings.lastStreakCheck,
           isLoading: false,
@@ -190,6 +190,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
             streak: state.streak,
             lastStreakCheck: state.lastStreakCheck ?? DateTime.now(),
             updatedAt: DateTime.now(),
+            locationName: state.locationName,
           );
           await _ref.read(settingsServiceProvider).updateUserSettings(settings);
           state = state.copyWith(dailyGoal: newGoal);
@@ -208,19 +209,20 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       } else {
         final user = _ref.read(currentUserProvider);
         if (user != null) {
-          // Use the last known daily goal or current state, whichever is non-zero
-          final dailyGoal = _lastKnownDailyGoal ?? state.dailyGoal;
-          if (dailyGoal == 0) {
-            print('Warning: Attempting to update location with zero daily goal');
-            return; // Don't update if we don't have a valid daily goal
+          // First, fetch the current settings from Supabase to ensure we have the latest data
+          final currentSettings = await _ref.read(settingsServiceProvider).getUserSettings(user.id);
+          
+          if (currentSettings == null) {
+            print('Warning: No settings found when updating location');
+            return;
           }
           
-          // Create updated settings with the new location
+          // Create updated settings with the new location, preserving the existing daily goal
           final settings = UserSettings(
             userId: user.id,
-            dailyGoal: dailyGoal,
-            streak: state.streak,
-            lastStreakCheck: state.lastStreakCheck ?? DateTime.now(),
+            dailyGoal: currentSettings.dailyGoal, // Use the daily goal from Supabase
+            streak: currentSettings.streak,
+            lastStreakCheck: currentSettings.lastStreakCheck,
             updatedAt: DateTime.now(),
             locationName: location,
           );
@@ -229,7 +231,11 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
           await _ref.read(settingsServiceProvider).updateUserSettings(settings);
           
           // Update local state
-          state = state.copyWith(locationName: location);
+          state = state.copyWith(
+            locationName: location,
+            dailyGoal: currentSettings.dailyGoal, // Update the daily goal in the state
+          );
+          _lastKnownDailyGoal = currentSettings.dailyGoal; // Update the last known daily goal
         }
       }
     } catch (error) {

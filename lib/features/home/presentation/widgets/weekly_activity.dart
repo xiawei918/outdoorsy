@@ -52,7 +52,7 @@ class WeeklyActivity extends ConsumerWidget {
                     shape: BoxShape.circle,
                     color: (day['hasActivity'] as bool)
                         ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.surfaceVariant,
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
                   ),
                 ),
               ],

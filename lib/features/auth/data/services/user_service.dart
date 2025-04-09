@@ -51,6 +51,7 @@ class UserService {
           'streak': settings.streak,
           'last_streak_check': settings.lastStreakCheck.toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
+          'location_name': settings.locationName,
         });
   }
 
@@ -91,6 +92,7 @@ class UserService {
         'streak': 0,
         'last_streak_check': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
+        'location_name': '', // Initialize with empty location
       });
       print('Settings created/updated successfully');
     } catch (e) {

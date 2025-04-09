@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../../history/presentation/providers/history_provider.dart';
 

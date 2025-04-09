@@ -34,7 +34,7 @@ class SunsetDisplay extends ConsumerWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             error: (_, __) => Text(
-              'Sunset at 7:30 PM',
+              'Sunset Unavailable',
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
