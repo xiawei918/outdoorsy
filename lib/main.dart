@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/config/supabase_config.dart';
 import 'core/config/router_config.dart';
@@ -7,6 +8,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await SupabaseConfig.initialize();
+
+  // Lock orientation to portrait mode
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   runApp(
     const ProviderScope(

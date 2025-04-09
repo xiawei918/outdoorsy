@@ -24,16 +24,11 @@ class HomePage extends ConsumerStatefulWidget {
 class _HomePageState extends ConsumerState<HomePage> {
   // Navigation state
   int _selectedIndex = 0;
-  
-  late TextEditingController _goalController;
-  late TextEditingController _locationController;
   bool _hasRequestedLocation = false;
 
   @override
   void initState() {
     super.initState();
-    _goalController = TextEditingController();
-    _locationController = TextEditingController();
     
     // Request location permission after a short delay to ensure the page is fully loaded
     Future.delayed(const Duration(milliseconds: 500), () {
@@ -46,13 +41,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   void _requestLocationPermission() {
     _hasRequestedLocation = true;
     ref.read(locationProvider.notifier).requestLocationPermission();
-  }
-
-  @override
-  void dispose() {
-    _goalController.dispose();
-    _locationController.dispose();
-    super.dispose();
   }
 
   @override
