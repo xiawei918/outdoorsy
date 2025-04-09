@@ -44,6 +44,7 @@ class SettingsService {
         streak: response['streak'] ?? 0,
         lastStreakCheck: lastStreakCheck,
         updatedAt: updatedAt,
+        locationName: response['location_name'] ?? '',
       );
     } catch (e) {
       print('Error fetching settings: $e');
@@ -63,6 +64,7 @@ class SettingsService {
             'streak': settings.streak,
             'last_streak_check': settings.lastStreakCheck.toIso8601String(),
             'updated_at': settings.updatedAt.toIso8601String(),
+            'location_name': settings.locationName,
           })
           .select()
           .single();

@@ -11,6 +11,7 @@ class UserSettings with _$UserSettings {
     required int streak,
     required DateTime lastStreakCheck,
     required DateTime updatedAt,
+    @Default('Unknown') String locationName,
   }) = _UserSettings;
 
   factory UserSettings.fromJson(Map<String, dynamic> json) => _$UserSettingsFromJson(json);

@@ -215,6 +215,20 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
             return; // Don't update if we don't have a valid daily goal
           }
           
+          // Create updated settings with the new location
+          final settings = UserSettings(
+            userId: user.id,
+            dailyGoal: dailyGoal,
+            streak: state.streak,
+            lastStreakCheck: state.lastStreakCheck ?? DateTime.now(),
+            updatedAt: DateTime.now(),
+            locationName: location,
+          );
+          
+          // Update settings in Supabase
+          await _ref.read(settingsServiceProvider).updateUserSettings(settings);
+          
+          // Update local state
           state = state.copyWith(locationName: location);
         }
       }
