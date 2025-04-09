@@ -183,4 +183,10 @@ test/coverage/
 # Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile
-/android/app/release 
+/android/app/release
+
+# Firebase and web deployment
+.firebase/
+.firebaserc
+firebase.json
+web/ 
