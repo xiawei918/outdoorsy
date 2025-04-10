@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -112,6 +113,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     try {
       final authService = ref.read(authServiceProvider);
       await authService.signInWithGoogle();
+      
       if (mounted) {
         Toast.show(
           context: context,
@@ -144,6 +146,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     try {
       final authService = ref.read(authServiceProvider);
       await authService.signInWithApple();
+      
       if (mounted) {
         Toast.show(
           context: context,

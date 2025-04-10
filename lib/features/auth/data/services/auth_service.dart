@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/config/supabase_config.dart';
 import 'user_service.dart';
@@ -6,6 +8,22 @@ import '../../domain/models/profile.dart';
 class AuthService {
   final _auth = SupabaseConfig.auth;
   final _userService = UserService();
+
+  // Get the redirect URL for mobile
+  String get _redirectUrl => 'io.supabase.outdoor://login-callback/';
+
+  // Get the redirect URL for password reset on mobile
+  String get _resetPasswordRedirectUrl => 'io.supabase.outdoor://reset-password/';
+
+  // Check if Supabase is initialized
+  bool get _isInitialized => Supabase.instance.client.auth != null;
+
+  Future<void> _ensureInitialized() async {
+    if (!_isInitialized) {
+      print('Supabase not initialized, initializing now...');
+      await SupabaseConfig.initialize();
+    }
+  }
 
   Future<AuthResponse> signInWithEmail({
     required String email,
@@ -138,65 +156,92 @@ class AuthService {
   }
 
   Future<void> resetPassword(String email) async {
-    print('Sending password reset email to: $email');
+    print('Starting password reset process for email: $email');
     
     try {
+      // First verify the auth configuration
+      print('Verifying auth configuration...');
+      print('Supabase URL: ${SupabaseConfig.supabaseUrl}');
+      print('Auth client initialized: ${_auth != null}');
+      
+      // Send password reset email
       await _auth.resetPasswordForEmail(
         email,
-        redirectTo: 'io.supabase.outdoor://reset-password/',
+        redirectTo: _resetPasswordRedirectUrl,
       );
+      
       print('Password reset email sent successfully');
     } catch (e) {
-      print('Error sending password reset email: $e');
-      if (e is AuthException) {
-        print('Auth error details:');
-        print('Status code: ${e.statusCode}');
-        print('Message: ${e.message}');
-        
-        // Handle specific error cases
-        if (e.message.contains('not found')) {
-          throw Exception('No account found with this email address.');
-        } else if (e.message.contains('rate limit')) {
-          throw Exception('Too many requests. Please try again later.');
-        }
-      }
+      print('Error during password reset process: $e');
       rethrow;
     }
   }
 
   Future<void> signInWithGoogle() async {
-    final response = await _auth.signInWithOAuth(
-      OAuthProvider.google,
-      redirectTo: 'io.supabase.outdoor://login-callback/',
-    );
-
-    // Create initial user data if this is the first time signing in
-    if (response && _auth.currentUser != null) {
-      final user = _auth.currentUser!;
-      final name = user.userMetadata?['full_name'] as String? ?? 'User';
-      try {
-        await _userService.createInitialUserData(user, name);
-      } catch (e) {
-        // Ignore if user data already exists
+    print('Starting Google sign in process');
+    
+    try {
+      await _ensureInitialized();
+      
+      // First verify the auth configuration
+      print('Verifying auth configuration...');
+      print('Supabase URL: ${SupabaseConfig.supabaseUrl}');
+      print('Auth client initialized: ${_auth != null}');
+      
+      // Sign in with Google
+      final response = await _auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: _redirectUrl,
+      );
+      
+      print('Google sign in response received');
+      
+      // Create initial user data if this is the first time signing in
+      if (response && _auth.currentUser != null) {
+        final user = _auth.currentUser!;
+        final name = user.userMetadata?['full_name'] as String? ?? 'User';
+        try {
+          await _userService.createInitialUserData(user, name);
+        } catch (e) {
+          // Ignore if user data already exists
+        }
       }
+    } catch (e) {
+      print('Error during Google sign in process: $e');
+      rethrow;
     }
   }
 
   Future<void> signInWithApple() async {
-    final response = await _auth.signInWithOAuth(
-      OAuthProvider.apple,
-      redirectTo: 'io.supabase.outdoor://login-callback/',
-    );
-
-    // Create initial user data if this is the first time signing in
-    if (response && _auth.currentUser != null) {
-      final user = _auth.currentUser!;
-      final name = user.userMetadata?['name'] as String? ?? 'User';
-      try {
-        await _userService.createInitialUserData(user, name);
-      } catch (e) {
-        // Ignore if user data already exists
+    print('Starting Apple sign in process');
+    
+    try {
+      // First verify the auth configuration
+      print('Verifying auth configuration...');
+      print('Supabase URL: ${SupabaseConfig.supabaseUrl}');
+      print('Auth client initialized: ${_auth != null}');
+      
+      // Sign in with Apple
+      final response = await _auth.signInWithOAuth(
+        OAuthProvider.apple,
+        redirectTo: _redirectUrl,
+      );
+      
+      print('Apple sign in response received');
+      
+      // Create initial user data if this is the first time signing in
+      if (response && _auth.currentUser != null) {
+        final user = _auth.currentUser!;
+        final name = user.userMetadata?['name'] as String? ?? 'User';
+        try {
+          await _userService.createInitialUserData(user, name);
+        } catch (e) {
+          // Ignore if user data already exists
+        }
       }
+    } catch (e) {
+      print('Error during Apple sign in process: $e');
+      rethrow;
     }
   }
 

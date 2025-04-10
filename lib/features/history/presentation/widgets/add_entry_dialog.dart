@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:numberpicker/numberpicker.dart';
 
 class AddEntryDialog extends StatefulWidget {
   final DateTime initialDate;
@@ -15,20 +16,14 @@ class AddEntryDialog extends StatefulWidget {
 
 class _AddEntryDialogState extends State<AddEntryDialog> {
   late DateTime _selectedDate;
-  final _minutesController = TextEditingController();
-  final _secondsController = TextEditingController();
+  int _hours = 0;
+  int _minutes = 0;
+  int _seconds = 0;
 
   @override
   void initState() {
     super.initState();
     _selectedDate = widget.initialDate;
-  }
-
-  @override
-  void dispose() {
-    _minutesController.dispose();
-    _secondsController.dispose();
-    super.dispose();
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -48,43 +43,58 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add Outdoor Time'),
+      title: Row(
+        children: [
+          const Icon(Icons.timer_outlined),
+          const SizedBox(width: 8),
+          const Text('Add Outdoor Time'),
+        ],
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          const Text(
+            'How long were you outside?',
+            style: TextStyle(fontSize: 16),
+          ),
+          const SizedBox(height: 16),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Expanded(
-                child: TextField(
-                  controller: _minutesController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Minutes',
-                    hintText: '0',
-                  ),
-                ),
+              _buildTimePicker(
+                value: _hours,
+                onChanged: (value) => setState(() => _hours = value),
+                label: 'Hours',
+                maxValue: 23,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: TextField(
-                  controller: _secondsController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Seconds',
-                    hintText: '0',
-                  ),
-                ),
+              _buildTimePicker(
+                value: _minutes,
+                onChanged: (value) => setState(() => _minutes = value),
+                label: 'Minutes',
+                maxValue: 59,
+              ),
+              _buildTimePicker(
+                value: _seconds,
+                onChanged: (value) => setState(() => _seconds = value),
+                label: 'Seconds',
+                maxValue: 59,
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          ListTile(
-            title: const Text('Date'),
-            subtitle: Text(
-              DateFormat('MMMM d, yyyy').format(_selectedDate),
+          const SizedBox(height: 24),
+          Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceVariant,
+              borderRadius: BorderRadius.circular(12),
             ),
-            trailing: const Icon(Icons.calendar_today),
-            onTap: () => _selectDate(context),
+            child: ListTile(
+              title: const Text('Date'),
+              subtitle: Text(
+                DateFormat('MMMM d, yyyy').format(_selectedDate),
+              ),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: () => _selectDate(context),
+            ),
           ),
         ],
       ),
@@ -95,13 +105,10 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
         ),
         TextButton(
           onPressed: () {
-            final minutes = int.tryParse(_minutesController.text) ?? 0;
-            final seconds = int.tryParse(_secondsController.text) ?? 0;
-            
-            if (minutes > 0 || seconds > 0) {
+            if (_hours > 0 || _minutes > 0 || _seconds > 0) {
               Navigator.pop(context, {
                 'date': _selectedDate,
-                'duration': minutes * 60 + seconds,
+                'duration': _hours * 3600 + _minutes * 60 + _seconds,
               });
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -113,6 +120,46 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
             }
           },
           child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildTimePicker({
+    required int value,
+    required ValueChanged<int> onChanged,
+    required String label,
+    required int maxValue,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: 60,
+          child: NumberPicker(
+            value: value,
+            minValue: 0,
+            maxValue: maxValue,
+            onChanged: onChanged,
+            itemWidth: 45,
+            itemHeight: 36,
+            textStyle: const TextStyle(fontSize: 14),
+            selectedTextStyle: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            haptics: true,
+            infiniteLoop: true,
+          ),
         ),
       ],
     );

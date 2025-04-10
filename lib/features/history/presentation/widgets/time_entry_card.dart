@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:numberpicker/numberpicker.dart';
 import '../../domain/models/time_entry.dart';
 
 class TimeEntryCard extends StatelessWidget {
@@ -119,78 +120,115 @@ class TimeEntryCard extends StatelessWidget {
   }
   
   void _showEditDialog(BuildContext context) {
-    final hoursController = TextEditingController(
-      text: (entry.duration / 3600).floor().toString()
-    );
-    final minutesController = TextEditingController(
-      text: ((entry.duration % 3600) / 60).floor().toString()
-    );
-    final secondsController = TextEditingController(
-      text: (entry.duration % 60).toString()
-    );
+    int hours = (entry.duration / 3600).floor();
+    int minutes = ((entry.duration % 3600) / 60).floor();
+    int seconds = entry.duration % 60;
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Time Entry'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: hoursController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Hours',
-                    ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.edit_outlined),
+              const SizedBox(width: 8),
+              const Text('Edit Time Entry'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'How long were you outside?',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildTimePicker(
+                    value: hours,
+                    onChanged: (value) => setState(() => hours = value),
+                    label: 'Hours',
+                    maxValue: 23,
+                    context: context,
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: minutesController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Minutes',
-                    ),
+                  _buildTimePicker(
+                    value: minutes,
+                    onChanged: (value) => setState(() => minutes = value),
+                    label: 'Minutes',
+                    maxValue: 59,
+                    context: context,
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: secondsController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Seconds',
-                    ),
+                  _buildTimePicker(
+                    value: seconds,
+                    onChanged: (value) => setState(() => seconds = value),
+                    label: 'Seconds',
+                    maxValue: 59,
+                    context: context,
                   ),
-                ),
-              ],
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (hours > 0 || minutes > 0 || seconds > 0) {
+                  onEdit(hours * 3600 + minutes * 60 + seconds);
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Save'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              final hours = int.tryParse(hoursController.text) ?? 0;
-              final minutes = int.tryParse(minutesController.text) ?? 0;
-              final seconds = int.tryParse(secondsController.text) ?? 0;
-              
-              if (hours > 0 || minutes > 0 || seconds > 0) {
-                onEdit(hours * 3600 + minutes * 60 + seconds);
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
+    );
+  }
+  
+  Widget _buildTimePicker({
+    required int value,
+    required ValueChanged<int> onChanged,
+    required String label,
+    required int maxValue,
+    required BuildContext context,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: 60,
+          child: NumberPicker(
+            value: value,
+            minValue: 0,
+            maxValue: maxValue,
+            onChanged: onChanged,
+            itemWidth: 45,
+            itemHeight: 36,
+            textStyle: const TextStyle(fontSize: 14),
+            selectedTextStyle: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            haptics: true,
+            infiniteLoop: true,
+          ),
+        ),
+      ],
     );
   }
 } 
