@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
 import '../../../settings/presentation/providers/location_provider.dart';
 import '../../../settings/presentation/providers/settings_provider.dart';
 import '../../../settings/presentation/providers/geocoding_provider.dart';
@@ -14,6 +15,7 @@ final sunsetProvider = FutureProvider<String>((ref) async {
   final sunsetService = ref.watch(sunsetServiceProvider);
   final geocodingService = ref.watch(geocodingServiceProvider);
   final locationCache = ref.watch(locationCacheProvider);
+  final _logger = Logger('SunsetProvider');
   
   // If we have a manual location set in settings, use it first
   if (settings.locationName.isNotEmpty) {
@@ -41,10 +43,10 @@ final sunsetProvider = FutureProvider<String>((ref) async {
         // Get sunset time for the manual location
         return await sunsetService.getSunsetTime(latitude, longitude);
       } else {
-        print('Could not geocode location: ${settings.locationName}');
+        _logger.warning('Could not geocode location: ${settings.locationName}');
       }
     } catch (e) {
-      print('Error getting sunset time from manual location: $e');
+      _logger.severe('Error getting sunset time from manual location: $e');
     }
   }
   
@@ -57,7 +59,7 @@ final sunsetProvider = FutureProvider<String>((ref) async {
       // Get sunset time for the current location
       return await sunsetService.getSunsetTime(latitude, longitude);
     } catch (e) {
-      print('Error getting sunset time from device location: $e');
+      _logger.severe('Error getting sunset time from device location: $e');
     }
   }
   

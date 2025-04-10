@@ -1,29 +1,31 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/config/supabase_config.dart';
 import '../../../auth/domain/models/user_settings.dart';
+import 'package:logging/logging.dart';
 
 class SettingsService {
   final _supabase = SupabaseConfig.client;
+  final _logger = Logger('SettingsService');
 
   Future<UserSettings?> getUserSettings(String userId) async {
     try {
-      print('Fetching settings from Supabase for user: $userId');
+      _logger.info('Fetching settings from Supabase for user: $userId');
       final response = await _supabase
           .from('user_settings')
           .select()
           .eq('user_id', userId)
           .single();
 
-      print('Supabase response: $response');
+      _logger.info('Supabase response: $response');
 
       if (response == null) {
-        print('No settings found in Supabase');
+        _logger.info('No settings found in Supabase');
         return null;
       }
 
       // Ensure we have all required fields
       if (response['user_id'] == null || response['daily_goal'] == null) {
-        print('Missing required fields in response');
+        _logger.info('Missing required fields in response');
         return null;
       }
 
@@ -47,14 +49,14 @@ class SettingsService {
         locationName: response['location_name'] ?? '',
       );
     } catch (e) {
-      print('Error fetching settings: $e');
+      _logger.severe('Error fetching settings', e);
       return null;
     }
   }
 
   Future<void> updateUserSettings(UserSettings settings) async {
     try {
-      print('Attempting to update settings for user: ${settings.userId}');
+      _logger.info('Attempting to update settings for user: ${settings.userId}');
       
       final response = await _supabase
           .from('user_settings')
@@ -69,13 +71,13 @@ class SettingsService {
           .select()
           .single();
           
-      print('Update response: $response');
+      _logger.info('Update response: $response');
       
       if (response == null) {
         throw Exception('Failed to update settings: No response from Supabase');
       }
     } catch (e) {
-      print('Error updating settings: $e');
+      _logger.severe('Error updating settings', e);
       rethrow;
     }
   }

@@ -28,6 +28,7 @@ dependencies:
   geolocator: ^13.0.4
   geocoding: ^3.0.0
   numberpicker: ^2.1.2
+  logging: ^1.2.0
 
 dev_dependencies:
   flutter_test:

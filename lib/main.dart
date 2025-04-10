@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:logging/logging.dart';
 import 'core/config/supabase_config.dart';
 import 'core/theme/app_theme.dart';
+import 'core/utils/logging_config.dart';
 import 'features/auth/presentation/pages/auth_page.dart';
 import 'features/auth/presentation/pages/signup_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
@@ -12,10 +14,14 @@ import 'features/auth/presentation/providers/auth_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize logging
+  initializeLogging();
+  final _logger = Logger('Main');
+
   try {
     await SupabaseConfig.initialize();
   } catch (e) {
-    print('Error initializing Supabase: $e');
+    _logger.severe('Error initializing Supabase', e);
     // You might want to show an error screen here
   }
 

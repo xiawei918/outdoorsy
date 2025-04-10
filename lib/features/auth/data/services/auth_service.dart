@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:logging/logging.dart';
 import '../../../../core/config/supabase_config.dart';
 import 'user_service.dart';
 import '../../domain/models/profile.dart';
@@ -8,6 +9,7 @@ import '../../domain/models/profile.dart';
 class AuthService {
   final _auth = SupabaseConfig.auth;
   final _userService = UserService();
+  final _logger = Logger('AuthService');
 
   // Get the redirect URL for mobile
   String get _redirectUrl => 'io.supabase.outdoor://login-callback/';
@@ -20,7 +22,7 @@ class AuthService {
 
   Future<void> _ensureInitialized() async {
     if (!_isInitialized) {
-      print('Supabase not initialized, initializing now...');
+      _logger.info('Supabase not initialized, initializing now...');
       await SupabaseConfig.initialize();
     }
   }
@@ -29,7 +31,7 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    print('Starting sign in process for email: $email');
+    _logger.info('Starting sign in process for email: $email');
     
     try {
       final response = await _auth.signInWithPassword(
@@ -37,21 +39,21 @@ class AuthService {
         password: password,
       );
       
-      print('Sign in successful. User ID: ${response.user?.id}');
+      _logger.info('Sign in successful. User ID: ${response.user?.id}');
       
       if (response.user != null) {
         final user = response.user!;
         final name = user.userMetadata?['name'] as String? ?? 'User';
-        print('User metadata - name: $name');
+        _logger.info('User metadata - name: $name');
         
         try {
           // Check if profile exists
           final existingProfile = await _userService.getProfile(user.id);
-          print('Existing profile found: ${existingProfile.name}');
+          _logger.info('Existing profile found: ${existingProfile.name}');
           
           // If profile exists but name is different, update it
           if (existingProfile.name != name) {
-            print('Updating profile name to match metadata');
+            _logger.info('Updating profile name to match metadata');
             await _userService.updateProfile(Profile(
               id: user.id,
               name: name,
@@ -61,12 +63,12 @@ class AuthService {
             ));
           }
         } catch (e) {
-          print('No existing profile found, creating initial data');
+          _logger.info('No existing profile found, creating initial data');
           try {
             await _userService.createInitialUserData(user, name);
-            print('Initial user data created successfully');
+            _logger.info('Initial user data created successfully');
           } catch (dataError) {
-            print('Error creating initial user data: $dataError');
+            _logger.warning('Error creating initial user data: $dataError');
             // Continue with sign in even if data creation fails
           }
         }
@@ -74,7 +76,7 @@ class AuthService {
       
       return response;
     } catch (e) {
-      print('Error during sign in process: $e');
+      _logger.severe('Error during sign in process: $e');
       rethrow;
     }
   }
@@ -84,13 +86,13 @@ class AuthService {
     required String password,
     required String name,
   }) async {
-    print('Starting sign up process for email: $email, name: $name');
+    _logger.info('Starting sign up process for email: $email, name: $name');
     
     try {
       // First verify the auth configuration
-      print('Verifying auth configuration...');
-      print('Supabase URL: ${SupabaseConfig.supabaseUrl}');
-      print('Auth client initialized: ${_auth != null}');
+      _logger.info('Verifying auth configuration...');
+      _logger.info('Supabase URL: ${SupabaseConfig.supabaseUrl}');
+      _logger.info('Auth client initialized: ${_auth != null}');
       
       // Sign up with user metadata included
       final response = await _auth.signUp(
@@ -99,11 +101,11 @@ class AuthService {
         data: {'name': name},  // Include name in initial metadata
       );
       
-      print('Sign up response received:');
-      print('User ID: ${response.user?.id}');
-      print('Session: ${response.session != null ? 'Created' : 'Not created'}');
-      print('Email confirmation required: ${response.user?.emailConfirmedAt == null}');
-      print('User metadata: ${response.user?.userMetadata}');
+      _logger.info('Sign up response received:');
+      _logger.info('User ID: ${response.user?.id}');
+      _logger.info('Session: ${response.session != null ? 'Created' : 'Not created'}');
+      _logger.info('Email confirmation required: ${response.user?.emailConfirmedAt == null}');
+      _logger.info('User metadata: ${response.user?.userMetadata}');
       
       if (response.user == null) {
         throw Exception('Sign up failed: No user returned in response');
@@ -112,26 +114,26 @@ class AuthService {
       // Create profile and settings
       if (response.user != null) {
         try {
-          print('Creating profile and settings for user: ${response.user!.id}');
+          _logger.info('Creating profile and settings for user: ${response.user!.id}');
           await _userService.createInitialUserData(response.user!, name);
-          print('Successfully created profile and settings');
+          _logger.info('Successfully created profile and settings');
         } catch (dataError) {
-          print('Error creating profile and settings: $dataError');
+          _logger.warning('Error creating profile and settings: $dataError');
           // Continue anyway as the user was created successfully
         }
       }
       
       if (response.session == null) {
-        print('Note: No session created - this is expected as email confirmation is required');
+        _logger.info('Note: No session created - this is expected as email confirmation is required');
       }
       
       return response;
     } catch (e) {
-      print('Error during sign up process: $e');
+      _logger.severe('Error during sign up process: $e');
       if (e is AuthException) {
-        print('Auth error details:');
-        print('Status code: ${e.statusCode}');
-        print('Message: ${e.message}');
+        _logger.info('Auth error details:');
+        _logger.info('Status code: ${e.statusCode}');
+        _logger.info('Message: ${e.message}');
         
         // Handle specific error cases
         if (e.statusCode == 500) {
@@ -142,11 +144,11 @@ class AuthService {
           } else if (e.message.contains('weak password')) {
             throw Exception('Please choose a stronger password.');
           } else {
-            print('Database error occurred. This might be due to:');
-            print('1. Missing or incorrect auth.users table');
-            print('2. Incorrect permissions on the auth schema');
-            print('3. Database configuration issues');
-            print('4. Trigger function error');
+            _logger.severe('Database error occurred. This might be due to:');
+            _logger.severe('1. Missing or incorrect auth.users table');
+            _logger.severe('2. Incorrect permissions on the auth schema');
+            _logger.severe('3. Database configuration issues');
+            _logger.severe('4. Trigger function error');
             throw Exception('Unable to create account. Please try again later or contact support if the issue persists.');
           }
         }
@@ -156,13 +158,13 @@ class AuthService {
   }
 
   Future<void> resetPassword(String email) async {
-    print('Starting password reset process for email: $email');
+    _logger.info('Starting password reset process for email: $email');
     
     try {
       // First verify the auth configuration
-      print('Verifying auth configuration...');
-      print('Supabase URL: ${SupabaseConfig.supabaseUrl}');
-      print('Auth client initialized: ${_auth != null}');
+      _logger.info('Verifying auth configuration...');
+      _logger.info('Supabase URL: ${SupabaseConfig.supabaseUrl}');
+      _logger.info('Auth client initialized: ${_auth != null}');
       
       // Send password reset email
       await _auth.resetPasswordForEmail(
@@ -170,23 +172,23 @@ class AuthService {
         redirectTo: _resetPasswordRedirectUrl,
       );
       
-      print('Password reset email sent successfully');
+      _logger.info('Password reset email sent successfully');
     } catch (e) {
-      print('Error during password reset process: $e');
+      _logger.severe('Error during password reset process: $e');
       rethrow;
     }
   }
 
   Future<void> signInWithGoogle() async {
-    print('Starting Google sign in process');
+    _logger.info('Starting Google sign in process');
     
     try {
       await _ensureInitialized();
       
       // First verify the auth configuration
-      print('Verifying auth configuration...');
-      print('Supabase URL: ${SupabaseConfig.supabaseUrl}');
-      print('Auth client initialized: ${_auth != null}');
+      _logger.info('Verifying auth configuration...');
+      _logger.info('Supabase URL: ${SupabaseConfig.supabaseUrl}');
+      _logger.info('Auth client initialized: ${_auth != null}');
       
       // Sign in with Google
       final response = await _auth.signInWithOAuth(
@@ -194,7 +196,7 @@ class AuthService {
         redirectTo: _redirectUrl,
       );
       
-      print('Google sign in response received');
+      _logger.info('Google sign in response received');
       
       // Create initial user data if this is the first time signing in
       if (response && _auth.currentUser != null) {
@@ -207,19 +209,19 @@ class AuthService {
         }
       }
     } catch (e) {
-      print('Error during Google sign in process: $e');
+      _logger.severe('Error during Google sign in process: $e');
       rethrow;
     }
   }
 
   Future<void> signInWithApple() async {
-    print('Starting Apple sign in process');
+    _logger.info('Starting Apple sign in process');
     
     try {
       // First verify the auth configuration
-      print('Verifying auth configuration...');
-      print('Supabase URL: ${SupabaseConfig.supabaseUrl}');
-      print('Auth client initialized: ${_auth != null}');
+      _logger.info('Verifying auth configuration...');
+      _logger.info('Supabase URL: ${SupabaseConfig.supabaseUrl}');
+      _logger.info('Auth client initialized: ${_auth != null}');
       
       // Sign in with Apple
       final response = await _auth.signInWithOAuth(
@@ -227,7 +229,7 @@ class AuthService {
         redirectTo: _redirectUrl,
       );
       
-      print('Apple sign in response received');
+      _logger.info('Apple sign in response received');
       
       // Create initial user data if this is the first time signing in
       if (response && _auth.currentUser != null) {
@@ -240,16 +242,18 @@ class AuthService {
         }
       }
     } catch (e) {
-      print('Error during Apple sign in process: $e');
+      _logger.severe('Error during Apple sign in process: $e');
       rethrow;
     }
   }
 
   Future<void> signOut() async {
     try {
+      _logger.info('Starting sign out process');
       await _auth.signOut();
+      _logger.info('Sign out successful');
     } catch (e) {
-      print('Error during sign out: $e');
+      _logger.severe('Error during sign out: $e');
       rethrow;
     }
   }

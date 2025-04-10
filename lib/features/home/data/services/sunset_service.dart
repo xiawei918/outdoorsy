@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:logging/logging.dart';
 
 class SunsetService {
   static const String baseUrl = 'https://api.sunrise-sunset.org/json';
+  final _logger = Logger('SunsetService');
 
   /// Fetches the sunset time for the given coordinates
   /// Returns the sunset time in local time zone as a formatted string (e.g. "7:30 PM")
@@ -29,7 +31,7 @@ class SunsetService {
       }
       throw Exception('Failed to fetch sunset time');
     } catch (e) {
-      print('Error fetching sunset time: $e');
+      _logger.severe('Error fetching sunset time: $e');
       // todo: handle when sunset service is not available
       return '7:30 PM'; // Fallback time
     }

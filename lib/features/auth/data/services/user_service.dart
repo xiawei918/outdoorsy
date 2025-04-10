@@ -1,10 +1,12 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:logging/logging.dart';
 import '../../../../core/config/supabase_config.dart';
 import '../../domain/models/profile.dart';
 import '../../domain/models/user_settings.dart';
 
 class UserService {
   final _client = SupabaseConfig.client;
+  final _logger = Logger('UserService');
 
   Future<Profile> getProfile(String userId) async {
     final response = await _client
@@ -12,7 +14,7 @@ class UserService {
         .select()
         .eq('id', userId)
         .single();
-        print('here: $response');
+        _logger.info('Profile response: $response');
     return Profile.fromJson({
       'id': response['id'],
       'name': response['name'],
@@ -58,18 +60,18 @@ class UserService {
   Future<void> createInitialUserData(User user, String name) async {
     // First, check if the tables exist
     try {
-      print('Checking if tables exist...');
+      _logger.info('Checking if tables exist...');
       await _client.from('profiles').select('id').limit(1);
       await _client.from('user_settings').select('user_id').limit(1);
-      print('Tables exist, proceeding with data creation');
+      _logger.info('Tables exist, proceeding with data creation');
     } catch (e) {
-      print('Error checking tables: $e');
+      _logger.severe('Error checking tables: $e');
       throw Exception('Database tables may not exist: $e');
     }
 
     // Create or update profile
     try {
-      print('Creating/updating profile for user: ${user.id}');
+      _logger.info('Creating/updating profile for user: ${user.id}');
       await _client.from('profiles').upsert({
         'id': user.id,
         'name': name,
@@ -77,15 +79,15 @@ class UserService {
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       });
-      print('Profile created/updated successfully');
+      _logger.info('Profile created/updated successfully');
     } catch (e) {
-      print('Error creating/updating profile: $e');
+      _logger.warning('Error creating/updating profile: $e');
       // Continue to try creating settings even if profile fails
     }
 
     // Create or update settings
     try {
-      print('Creating/updating settings for user: ${user.id}');
+      _logger.info('Creating/updating settings for user: ${user.id}');
       await _client.from('user_settings').upsert({
         'user_id': user.id,
         'daily_goal': 1800, // 30 minutes in seconds
@@ -94,9 +96,9 @@ class UserService {
         'updated_at': DateTime.now().toIso8601String(),
         'location_name': '', // Initialize with empty location
       });
-      print('Settings created/updated successfully');
+      _logger.info('Settings created/updated successfully');
     } catch (e) {
-      print('Error creating/updating settings: $e');
+      _logger.severe('Error creating/updating settings: $e');
       throw Exception('Failed to create/update user settings: $e');
     }
   }

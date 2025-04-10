@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
 import '../../../auth/domain/models/user_settings.dart';
 import '../../data/services/settings_service.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -47,6 +48,7 @@ class SettingsState {
 class SettingsNotifier extends StateNotifier<SettingsState> {
   final Ref _ref;
   int? _lastKnownDailyGoal;
+  final _logger = Logger('SettingsNotifier');
 
   SettingsNotifier(this._ref) : super(SettingsState(
     dailyGoal: 30 * 60, // Start with default 30 minutes in seconds
@@ -137,7 +139,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         _lastKnownDailyGoal = settings.dailyGoal;
       }
     } catch (error) {
-      print('Error loading settings: $error');
+      _logger.severe('Error loading settings: $error');
       state = state.copyWith(
         error: error.toString(),
         isLoading: false,
@@ -175,7 +177,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         final currentSettings = await _ref.read(settingsServiceProvider).getUserSettings(user.id);
         
         if (currentSettings == null) {
-          print('Warning: No settings found when updating location');
+          _logger.warning('No settings found when updating location');
           return;
         }
         

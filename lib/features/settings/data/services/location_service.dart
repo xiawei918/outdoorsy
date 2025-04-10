@@ -1,7 +1,10 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:logging/logging.dart';
 
 class LocationService {
+  final _logger = Logger('LocationService');
+
   /// Check if location services are enabled
   Future<bool> isLocationServiceEnabled() async {
     bool serviceEnabled;
@@ -9,7 +12,7 @@ class LocationService {
       serviceEnabled = await Geolocator.isLocationServiceEnabled();
       return serviceEnabled;
     } catch (e) {
-      print('Error checking location service: $e');
+      _logger.severe('Error checking location service', e);
       return false;
     }
   }
@@ -19,7 +22,7 @@ class LocationService {
     try {
       return await Geolocator.checkPermission();
     } catch (e) {
-      print('Error checking location permission: $e');
+      _logger.severe('Error checking location permission', e);
       return LocationPermission.denied;
     }
   }
@@ -29,7 +32,7 @@ class LocationService {
     try {
       return await Geolocator.requestPermission();
     } catch (e) {
-      print('Error requesting location permission: $e');
+      _logger.severe('Error requesting location permission', e);
       return LocationPermission.denied;
     }
   }
@@ -45,7 +48,7 @@ class LocationService {
         ),
       );
     } catch (e) {
-      print('Error getting current position: $e');
+      _logger.severe('Error getting current position', e);
       return null;
     }
   }
@@ -72,7 +75,7 @@ class LocationService {
         'state': '',
       };
     } catch (e) {
-      print('Error getting city and state: $e');
+      _logger.severe('Error getting city and state', e);
       return {
         'city': '',
         'state': '',

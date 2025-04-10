@@ -1,12 +1,14 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:logging/logging.dart';
 
 class SupabaseConfig {
   static String get supabaseUrl => dotenv.env['SUPABASE_URL'] ?? '';
   static String get supabaseAnonKey => dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+  static final _logger = Logger('SupabaseConfig');
 
   static Future<void> initialize() async {
-    print('Loading environment variables...');
+    _logger.info('Loading environment variables...');
     await dotenv.load(fileName: ".env");
     
     final url = supabaseUrl;
@@ -16,12 +18,12 @@ class SupabaseConfig {
       throw Exception('Supabase URL or Anon Key not found in environment variables');
     }
     
-    print('Initializing Supabase with URL: $url');
+    _logger.info('Initializing Supabase with URL: $url');
     await Supabase.initialize(
       url: url,
       anonKey: anonKey,
     );
-    print('Supabase initialized successfully');
+    _logger.info('Supabase initialized successfully');
   }
 
   static SupabaseClient get client => Supabase.instance.client;
