@@ -9,7 +9,7 @@ import '../../data/services/sunset_service.dart';
 final sunsetServiceProvider = Provider((ref) => SunsetService());
 
 /// Provider that fetches sunset time based on user's location
-final sunsetProvider = FutureProvider<String>((ref) async {
+final sunsetProvider = FutureProvider<String?>((ref) async {
   final locationState = ref.watch(locationProvider);
   final settings = ref.watch(settingsProvider);
   final sunsetService = ref.watch(sunsetServiceProvider);
@@ -63,6 +63,6 @@ final sunsetProvider = FutureProvider<String>((ref) async {
     }
   }
   
-  // If no location available, use the default time
-  return '7:30 PM';
+  // If no location available, return null
+  return null;
 }); 

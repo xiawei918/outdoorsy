@@ -83,12 +83,11 @@ class StatsNotifier extends StateNotifier<StatsState> {
       final settings = _ref.read(settingsProvider);
       final dailyGoal = settings.dailyGoal;
 
-      // Calculate stats for the last 7 days
+      // Calculate stats for all historical data
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      final sevenDaysAgo = now.subtract(const Duration(days: 7));
       
-      // Create a map of dates to total duration for the last 7 days
+      // Create a map of dates to total duration for all entries
       final dateMap = <DateTime, int>{};
       for (final entry in entries) {
         final date = DateTime(
@@ -96,9 +95,7 @@ class StatsNotifier extends StateNotifier<StatsState> {
           entry.date.month,
           entry.date.day,
         );
-        if (date.isAfter(sevenDaysAgo) || date.isAtSameMomentAs(sevenDaysAgo)) {
-          dateMap[date] = (dateMap[date] ?? 0) + entry.duration;
-        }
+        dateMap[date] = (dateMap[date] ?? 0) + entry.duration;
       }
 
       // Calculate total time
@@ -107,9 +104,9 @@ class StatsNotifier extends StateNotifier<StatsState> {
       // Calculate active days (days with any activity)
       final activeDays = dateMap.length;
 
-      // Calculate current streak
+      // Calculate current streak (excluding today since it hasn't finished)
       int currentStreak = 0;
-      DateTime currentDate = today;
+      DateTime currentDate = today.subtract(const Duration(days: 1)); // Start from yesterday
       while (true) {
         final totalDuration = dateMap[currentDate] ?? 0;
         if (totalDuration < dailyGoal) break;
@@ -118,12 +115,10 @@ class StatsNotifier extends StateNotifier<StatsState> {
         currentDate = currentDate.subtract(const Duration(days: 1));
       }
 
-      // Calculate days that met the goal in the last 7 days
+      // Calculate days that met the goal in all history
       var daysMetGoal = 0;
-      for (var i = 0; i < 7; i++) {
-        final date = today.subtract(Duration(days: i));
-        final totalDuration = dateMap[date] ?? 0;
-        if (totalDuration >= dailyGoal) {
+      for (final entry in dateMap.entries) {
+        if (entry.value >= dailyGoal) {
           daysMetGoal++;
         }
       }

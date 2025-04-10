@@ -272,7 +272,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  hintText: 'Enter your city and state',
+                                  hintText: 'Unknown',
                                   filled: true, // Add a background color to indicate it's disabled
                                   fillColor: Colors.grey[200],
                                 ),
@@ -381,13 +381,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 color: AppColors.gray700,
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          RoundedButton(
-            onPressed: _requestLocationPermission,
-            text: 'Allow',
-            backgroundColor: AppColors.primary,
-            textColor: Colors.white,
           ),
         ],
       ),

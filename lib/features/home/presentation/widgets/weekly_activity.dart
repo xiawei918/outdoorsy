@@ -25,8 +25,9 @@ class WeeklyActivity extends ConsumerWidget {
           dateMap[date] = (dateMap[date] ?? 0) + entry.duration;
         }
         
+        // Generate 7 days centered on today (3 days before, today, 3 days after)
         final days = List.generate(7, (index) {
-          final date = today.subtract(Duration(days: 6 - index));
+          final date = today.subtract(Duration(days: 3 - index));
           final duration = dateMap[date] ?? 0;
           final isActive = duration >= settings.dailyGoal;
           return {
@@ -38,11 +39,16 @@ class WeeklyActivity extends ConsumerWidget {
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: days.map((day) {
+            final date = day['date'] as DateTime;
+            final isToday = date.isAtSameMomentAs(today);
+            
             return Column(
               children: [
                 Text(
-                  _getDayName(day['date'] as DateTime),
-                  style: Theme.of(context).textTheme.bodySmall,
+                  isToday ? 'Today' : _getDayName(date),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Container(

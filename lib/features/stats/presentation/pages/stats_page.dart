@@ -22,14 +22,14 @@ class StatsPage extends ConsumerWidget {
                 child: Column(
                   children: [
                     Text(
-                      '7-Day Statistics',
+                      'History Statistics',
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Track your outdoor progress for the past week',
+                      'Track your outdoor progress',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),

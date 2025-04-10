@@ -24,10 +24,17 @@ class SunsetDisplay extends ConsumerWidget {
           )
         else
           sunsetTimeAsync.when(
-            data: (sunsetTime) => Text(
-              'Sunset at $sunsetTime',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            data: (sunsetTime) => sunsetTime != null
+                ? Text(
+                    'Sunset at $sunsetTime',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  )
+                : Text(
+                    'Sunset Unavailable',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
             loading: () => const SizedBox(
               width: 16,
               height: 16,
@@ -35,7 +42,9 @@ class SunsetDisplay extends ConsumerWidget {
             ),
             error: (_, __) => Text(
               'Sunset Unavailable',
-              style: Theme.of(context).textTheme.titleMedium,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+              ),
             ),
           ),
       ],

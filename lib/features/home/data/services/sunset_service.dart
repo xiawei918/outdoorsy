@@ -9,7 +9,8 @@ class SunsetService {
 
   /// Fetches the sunset time for the given coordinates
   /// Returns the sunset time in local time zone as a formatted string (e.g. "7:30 PM")
-  Future<String> getSunsetTime(double latitude, double longitude) async {
+  /// Returns null if there's an error or the service is unavailable
+  Future<String?> getSunsetTime(double latitude, double longitude) async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl?lat=$latitude&lng=$longitude&formatted=0'),
@@ -32,8 +33,7 @@ class SunsetService {
       throw Exception('Failed to fetch sunset time');
     } catch (e) {
       _logger.severe('Error fetching sunset time: $e');
-      // todo: handle when sunset service is not available
-      return '7:30 PM'; // Fallback time
+      return null;
     }
   }
 } 
