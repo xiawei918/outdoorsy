@@ -8,6 +8,7 @@ import '../../../settings/presentation/providers/settings_provider.dart';
 import '../../../settings/presentation/providers/location_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/widgets/user_avatar.dart';
 import '../widgets/daily_tip.dart';
 import '../widgets/bottom_navigation_bar.dart';
 import '../widgets/weekly_activity.dart';

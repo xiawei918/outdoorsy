@@ -12,6 +12,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/rounded_button.dart';
 import '../../../../core/widgets/settings_card.dart';
 import '../../../../core/widgets/settings_section.dart';
+import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -131,15 +132,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               SettingsCard(
                 child: Column(
                   children: [
-                    const CircleAvatar(
-                      radius: 40,
-                      backgroundColor: AppColors.gray400,
-                      child: Icon(
-                        Icons.person,
-                        size: 40,
-                        color: Colors.white,
-                      ),
-                    ),
+                    const UserAvatar(size: 80),
                     const SizedBox(height: 8),
                     Text(
                       currentUser?.userMetadata?['name'] ?? 'Guest User',
