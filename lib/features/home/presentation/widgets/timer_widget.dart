@@ -4,6 +4,7 @@ import 'dart:async';
 import '../../../timer/presentation/widgets/progress_ring.dart';
 import '../../../history/presentation/providers/history_provider.dart';
 import '../../../settings/presentation/providers/settings_provider.dart';
+import 'goal_achieved_modal.dart';
 
 class TimerWidget extends ConsumerStatefulWidget {
   const TimerWidget({super.key});
@@ -18,6 +19,7 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
   bool isRunning = false;
   DateTime? _startTime;
   Timer? _timer;
+  bool _hasShownGoalModal = false;
 
   @override
   void dispose() {
@@ -39,6 +41,7 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
       if (mounted) {
         setState(() {
           sessionProgress++;
+          _checkGoalAchievement();
         });
       }
     });
@@ -113,6 +116,29 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
     
     return totalProgress;
   }
+
+  void _checkGoalAchievement() {
+    if (_hasShownGoalModal) return;
+    
+    final settings = ref.read(settingsProvider);
+    final dailyGoal = settings.dailyGoal;
+    final totalProgress = _calculateTotalProgress();
+    
+    if (totalProgress >= dailyGoal) {
+      _showGoalAchievedModal();
+    }
+  }
+
+  void _showGoalAchievedModal() {
+    if (!_hasShownGoalModal && mounted) {
+      _hasShownGoalModal = true;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const GoalAchievedModal(),
+      );
+    }
+  }
   
   // Format seconds to a readable time string
   String _formatTime(int seconds) {
@@ -169,40 +195,48 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
     final hasMetGoal = totalProgress >= dailyGoal;
     
     return Expanded(
-      child: Column(
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: _toggleTimer,
-              child: ProgressRing(
-                progress: progressPercent,
-                size: 280,
-                strokeWidth: 20,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _formatTime(totalProgress),
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
+          // Timer in the center
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: _toggleTimer,
+                child: ProgressRing(
+                  progress: progressPercent,
+                  size: 280,
+                  strokeWidth: 20,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatTime(totalProgress),
+                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Daily goal: ${dailyGoal ~/ 60} min',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTimerButton(),
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Daily goal: ${dailyGoal ~/ 60} min',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTimerButton(),
+                    ],
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-          if (hasMetGoal) ...[
-            const SizedBox(height: 16),
-            _buildGoalBadge(),
-          ],
+          
+          // Goal badge positioned at the bottom
+          if (hasMetGoal)
+            Positioned(
+              bottom: 16,
+              child: _buildGoalBadge(),
+            ),
         ],
       ),
     );
