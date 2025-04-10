@@ -113,6 +113,19 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
     
     return totalProgress;
   }
+  
+  // Format seconds to a readable time string
+  String _formatTime(int seconds) {
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final remainingSeconds = seconds % 60;
+    
+    if (hours > 0) {
+      return '$hours:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+    } else {
+      return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +147,7 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '${(sessionProgress / 60).floor()}:${(sessionProgress % 60).toString().padLeft(2, '0')}',
+                _formatTime(totalProgress),
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
