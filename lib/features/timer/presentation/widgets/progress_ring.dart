@@ -55,13 +55,20 @@ class _ProgressRingPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 2;
 
-    // Draw background circle
+    // Draw background arc (3/4 circle)
     final backgroundPaint = Paint()
       ..color = color.withOpacity(0.2)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth;
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
 
-    canvas.drawCircle(center, radius, backgroundPaint);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      3*3.14/4, // Start from right (0 degrees)
+      4.71239, // Draw 3/4 circle (3π/2 radians)
+      false,
+      backgroundPaint,
+    );
 
     // Draw progress arc
     final progressPaint = Paint()
@@ -72,8 +79,8 @@ class _ProgressRingPainter extends CustomPainter {
 
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
-      -1.5708, // Start from top (-90 degrees)
-      6.28319 * progress, // Draw arc based on progress
+      3*3.14/4, // Start from right (0 degrees)
+      4.71239 * progress, // Draw arc based on progress (3π/2 * progress)
       false,
       progressPaint,
     );

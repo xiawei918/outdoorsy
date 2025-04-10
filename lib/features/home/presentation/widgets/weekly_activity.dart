@@ -25,10 +25,8 @@ class WeeklyActivity extends ConsumerWidget {
           dateMap[date] = (dateMap[date] ?? 0) + entry.duration;
         }
         
-        // Generate 7 days: 3 days before today, today, and 3 days after today
         final days = List.generate(7, (index) {
-          // Adjust the index to start from 3 days before today
-          final date = today.subtract(Duration(days: 3 - index));
+          final date = today.subtract(Duration(days: 6 - index));
           final duration = dateMap[date] ?? 0;
           final isActive = duration >= settings.dailyGoal;
           return {
@@ -42,13 +40,9 @@ class WeeklyActivity extends ConsumerWidget {
           children: days.map((day) {
             return Column(
               children: [
-                SizedBox(
-                  width: 40, // Fixed width for day labels
-                  child: Text(
-                    _getDayName(day['date'] as DateTime, today),
-                    style: Theme.of(context).textTheme.bodySmall,
-                    textAlign: TextAlign.center,
-                  ),
+                Text(
+                  _getDayName(day['date'] as DateTime),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 4),
                 Container(
@@ -78,39 +72,16 @@ class WeeklyActivity extends ConsumerWidget {
     );
   }
 
-  String _getDayName(DateTime date, DateTime today) {
-    // Check if the date is today
-    if (date.year == today.year && 
-        date.month == today.month && 
-        date.day == today.day) {
-      return 'Today';
-    }
-    
-    // Check if the date is in the future
-    if (date.isAfter(today)) {
-      // For future dates, show the day of the week
-      switch (date.weekday) {
-        case 1: return 'Mon';
-        case 2: return 'Tue';
-        case 3: return 'Wed';
-        case 4: return 'Thu';
-        case 5: return 'Fri';
-        case 6: return 'Sat';
-        case 7: return 'Sun';
-        default: return '';
-      }
-    } else {
-      // For past dates, show the day of the week
-      switch (date.weekday) {
-        case 1: return 'Mon';
-        case 2: return 'Tue';
-        case 3: return 'Wed';
-        case 4: return 'Thu';
-        case 5: return 'Fri';
-        case 6: return 'Sat';
-        case 7: return 'Sun';
-        default: return '';
-      }
+  String _getDayName(DateTime date) {
+    switch (date.weekday) {
+      case 1: return 'Mon';
+      case 2: return 'Tue';
+      case 3: return 'Wed';
+      case 4: return 'Thu';
+      case 5: return 'Fri';
+      case 6: return 'Sat';
+      case 7: return 'Sun';
+      default: return '';
     }
   }
 } 
