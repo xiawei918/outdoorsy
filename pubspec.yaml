@@ -29,6 +29,7 @@ dependencies:
   geocoding: ^3.0.0
   numberpicker: ^2.1.2
   logging: ^1.2.0
+  flutter_switch: ^0.3.2
 
 dev_dependencies:
   flutter_test:
