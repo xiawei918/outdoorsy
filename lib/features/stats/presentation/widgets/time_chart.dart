@@ -9,6 +9,7 @@ import '../../../../core/theme/app_colors.dart';
 enum TimeRange {
   weekly,
   monthly,
+  yearly,
 }
 
 class TimeChart extends ConsumerStatefulWidget {
@@ -30,51 +31,35 @@ class _TimeChartState extends ConsumerState<TimeChart> {
         // Timeframe selector
         Padding(
           padding: const EdgeInsets.only(bottom: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Weekly',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: _selectedRange == TimeRange.weekly 
-                      ? FontWeight.w600 
-                      : FontWeight.w400,
-                  color: _selectedRange == TimeRange.weekly
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
-                ),
-              ),
-              const SizedBox(width: 8),
-              FlutterSwitch(
-                width: 40.0,
-                height: 24.0,
-                valueFontSize: 0.0,
-                toggleSize: 20.0,
-                value: _selectedRange == TimeRange.monthly,
-                borderRadius: 12.0,
-                padding: 2.0,
-                activeColor: Theme.of(context).colorScheme.primary,
-                onToggle: (value) {
-                  setState(() {
-                    _selectedRange = value ? TimeRange.monthly : TimeRange.weekly;
-                  });
-                },
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Monthly',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: _selectedRange == TimeRange.monthly 
-                      ? FontWeight.w600 
-                      : FontWeight.w400,
-                  color: _selectedRange == TimeRange.monthly
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
-                ),
-              ),
+          child: ToggleButtons(
+            borderRadius: BorderRadius.circular(8),
+            constraints: const BoxConstraints(
+              minWidth: 80,
+              minHeight: 32,
+            ),
+            isSelected: [
+              _selectedRange == TimeRange.weekly,
+              _selectedRange == TimeRange.monthly,
+              _selectedRange == TimeRange.yearly,
             ],
+            onPressed: (index) {
+              setState(() {
+                _selectedRange = TimeRange.values[index];
+              });
+            },
+            children: const [
+              Text('Weekly'),
+              Text('Monthly'),
+              Text('Yearly'),
+            ],
+            textStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+            ),
+            selectedColor: Theme.of(context).colorScheme.primary,
+            selectedBorderColor: Theme.of(context).colorScheme.primary,
+            fillColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
         
@@ -97,17 +82,31 @@ class _TimeChartState extends ConsumerState<TimeChart> {
                 startDate = DateTime(now.year, now.month - 1, now.day);
                 daysToShow = 30;
                 break;
+              case TimeRange.yearly:
+                startDate = DateTime(now.year, 1, 1);
+                daysToShow = 365;
+                break;
             }
             
             // Initialize a map with all days in range, setting default values to 0
             final Map<DateTime, int> dailyTotals = {};
-            for (int i = 0; i < daysToShow; i++) {
-              final date = DateTime(
-                startDate.year,
-                startDate.month,
-                startDate.day + i,
-              );
-              dailyTotals[date] = 0;
+            
+            if (_selectedRange == TimeRange.yearly) {
+              // For yearly view, group by month
+              for (int month = 1; month <= 12; month++) {
+                final date = DateTime(now.year, month, 1);
+                dailyTotals[date] = 0;
+              }
+            } else {
+              // For weekly and monthly views, group by day
+              for (int i = 0; i < daysToShow; i++) {
+                final date = DateTime(
+                  startDate.year,
+                  startDate.month,
+                  startDate.day + i,
+                );
+                dailyTotals[date] = 0;
+              }
             }
             
             // Add up durations for days with entries
@@ -121,7 +120,13 @@ class _TimeChartState extends ConsumerState<TimeChart> {
               // Only include entries from the selected range
               if (date.isAfter(startDate.subtract(const Duration(days: 1))) && 
                   !date.isAfter(now)) {
-                dailyTotals[date] = (dailyTotals[date] ?? 0) + entry.duration;
+                if (_selectedRange == TimeRange.yearly) {
+                  // For yearly view, group by month
+                  final monthStart = DateTime(date.year, date.month, 1);
+                  dailyTotals[monthStart] = (dailyTotals[monthStart] ?? 0) + entry.duration;
+                } else {
+                  dailyTotals[date] = (dailyTotals[date] ?? 0) + entry.duration;
+                }
               }
             }
 
@@ -150,6 +155,10 @@ class _TimeChartState extends ConsumerState<TimeChart> {
               case TimeRange.monthly:
                 barWidth = 8;
                 xAxisInterval = 5;
+                break;
+              case TimeRange.yearly:
+                barWidth = 20;
+                xAxisInterval = 1;
                 break;
             }
 
@@ -199,8 +208,17 @@ class _TimeChartState extends ConsumerState<TimeChart> {
                         getTitlesWidget: (value, meta) {
                           final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
                           
-                          // For monthly view, only show labels for Mondays
-                          if (_selectedRange == TimeRange.monthly && date.weekday != DateTime.monday) {
+                          if (_selectedRange == TimeRange.yearly) {
+                            // For yearly view, show month names
+                            return Text(
+                              _getMonthAbbreviation(date.month),
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 11,
+                              ),
+                            );
+                          } else if (_selectedRange == TimeRange.monthly && date.weekday != DateTime.monday) {
+                            // For monthly view, only show labels for Mondays
                             return const SizedBox.shrink();
                           }
                           
@@ -239,6 +257,11 @@ class _TimeChartState extends ConsumerState<TimeChart> {
         ),
       ],
     );
+  }
+
+  String _getMonthAbbreviation(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[month - 1];
   }
 }
 
