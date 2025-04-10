@@ -127,6 +127,37 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
     }
   }
 
+  Widget _buildGoalBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.emoji_events, color: Colors.amber),
+          const SizedBox(width: 8),
+          Text(
+            'Daily Goal Achieved!',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
@@ -135,33 +166,44 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
     // Calculate total progress for today
     final totalProgress = _calculateTotalProgress();
     final progressPercent = (totalProgress / dailyGoal).clamp(0.0, 1.0);
+    final hasMetGoal = totalProgress >= dailyGoal;
     
     return Expanded(
-      child: GestureDetector(
-        onTap: _toggleTimer,
-        child: ProgressRing(
-          progress: progressPercent,
-          size: 280,
-          strokeWidth: 20,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _formatTime(totalProgress),
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
+      child: Column(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: _toggleTimer,
+              child: ProgressRing(
+                progress: progressPercent,
+                size: 280,
+                strokeWidth: 20,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _formatTime(totalProgress),
+                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Daily goal: ${dailyGoal ~/ 60} min',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTimerButton(),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Daily goal: ${dailyGoal ~/ 60} min',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 16),
-              _buildTimerButton(),
-            ],
+            ),
           ),
-        ),
+          if (hasMetGoal) ...[
+            const SizedBox(height: 16),
+            _buildGoalBadge(),
+          ],
+        ],
       ),
     );
   }
